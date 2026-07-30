@@ -2,6 +2,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.database import Base, engine
 from app.routers import auth
+from app.models import learner_profile  # adjust to your actual file/module name
 
 Base.metadata.create_all(bind=engine)
 
@@ -16,6 +17,8 @@ app.add_middleware(
 )
 
 app.include_router(auth.router)
+from app.routers import profile
+app.include_router(profile.router)
 
 @app.get("/")
 def root():
