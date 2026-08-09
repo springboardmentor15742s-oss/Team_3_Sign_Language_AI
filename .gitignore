@@ -4,4 +4,7 @@ __pycache__/
 *.pyc
 .env
 .DS_Store
-backend/data/
+backend/data/*
+!backend/data/models/
+backend/data/models/*
+!backend/data/models/gesture_classifier.pkl
