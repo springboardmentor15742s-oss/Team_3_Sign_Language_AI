@@ -25,6 +25,11 @@ SIMULATED_ATTEMPTS = [
     ("A", {"letter": "B", "confidence": 0.61}),  # fail
     ("L", None),  # no_attempt_detected
     ("F", {"letter": "F", "confidence": 0.74}),  # pass
+    # --- extra test data below: pads out A's fail count so it crosses the
+    # weak_areas threshold (>=3 scored attempts, <70% accuracy) for
+    # test_learning_analytics.py ---
+    ("A", {"letter": "C", "confidence": 0.55}),  # fail
+    ("A", {"letter": "D", "confidence": 0.58}),  # fail
 ]
 
 
