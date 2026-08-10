@@ -3,6 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.database import Base, engine
 from app.routers import auth
 from app.models import learner_profile  # adjust to your actual file/module name
+from app.models import practice_attempt
 
 Base.metadata.create_all(bind=engine)
 
