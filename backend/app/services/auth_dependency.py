@@ -37,3 +37,19 @@ def require_role(*allowed_roles: str):
             )
         return current_user
     return role_checker
+
+
+STAFF_ROLES = {"instructor", "accessibility_trainer", "admin"}
+
+
+def require_self_or_staff(learner_id: str, current_user: User = Depends(get_current_user)) -> User:
+    """
+    Restricts a /api/learner/{learner_id}/... route to the learner
+    themselves, or to staff roles who need visibility across learners.
+    """
+    if current_user.role not in STAFF_ROLES and current_user.id != learner_id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="You can only access your own data",
+        )
+    return current_user

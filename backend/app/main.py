@@ -20,6 +20,10 @@ app.add_middleware(
 app.include_router(auth.router)
 from app.routers import profile
 app.include_router(profile.router)
+from app.routers import practice
+app.include_router(practice.router)
+from app.routers import learner
+app.include_router(learner.router)
 
 @app.get("/")
 def root():
