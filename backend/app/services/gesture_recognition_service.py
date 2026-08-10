@@ -63,3 +63,14 @@ def recognize_gesture_from_path(image_path: str) -> dict | None:
         raise FileNotFoundError(f"Could not read image: {image_path}")
 
     return recognize_gesture(image)
+
+
+def get_supported_letters() -> list[str]:
+    """
+    Returns the gesture classes the trained classifier can recognize —
+    the model's own class list, so callers (e.g. recommendation_service)
+    have a single authoritative source for which letters are
+    practiceable instead of a separately maintained alphabet list.
+    """
+    model = _get_bundle()["model"]
+    return list(model.classes_)
