@@ -5,14 +5,14 @@ import { AlphabetBoard } from '../components/AlphabetBoard';
 import { PracticeNextPanel } from '../components/PracticeNextPanel';
 import { ConfusionPanel } from '../components/ConfusionPanel';
 import { Topbar } from '../components/Topbar';
-import { LearnerAnalytics, RecommendationItem } from '../types/analytics';
-import { mockConfusionPairs } from '../mocks/dashboardMockData';
+import { ConfusionPair, LearnerAnalytics, RecommendationItem } from '../types/analytics';
 import './Dashboard.css';
 
 export function Dashboard() {
   const { user } = useAuth();
   const [analytics, setAnalytics] = useState<LearnerAnalytics | null>(null);
   const [recommendations, setRecommendations] = useState<RecommendationItem[]>([]);
+  const [confusionPairs, setConfusionPairs] = useState<ConfusionPair[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
 
@@ -21,12 +21,14 @@ export function Dashboard() {
     setLoading(true);
     setLoadError(null);
     try {
-      const [analyticsRes, recommendationsRes] = await Promise.all([
+      const [analyticsRes, recommendationsRes, confusionRes] = await Promise.all([
         client.get<LearnerAnalytics>(`/api/learner/${user.id}/analytics`),
         client.get<{ recommendations: RecommendationItem[] }>(`/api/learner/${user.id}/recommendations`),
+        client.get<{ pairs: ConfusionPair[] }>(`/api/learner/${user.id}/confusion-pairs`),
       ]);
       setAnalytics(analyticsRes.data);
       setRecommendations(recommendationsRes.data.recommendations);
+      setConfusionPairs(confusionRes.data.pairs);
     } catch (err) {
       console.error('Failed to load dashboard data:', err);
       setLoadError('Could not load dashboard data.');
@@ -40,9 +42,6 @@ export function Dashboard() {
   useEffect(() => {
     loadDashboardData();
   }, [loadDashboardData]);
-
-  // Confusion pairs has no backing endpoint yet — see ConfusionPanel.tsx.
-  const confusionPairs = mockConfusionPairs;
 
   if (loading && !analytics) {
     return (

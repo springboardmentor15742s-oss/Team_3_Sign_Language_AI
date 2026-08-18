@@ -6,9 +6,8 @@ interface ConfusionPanelProps {
   pairs: ConfusionPair[];
 }
 
-// pairs is expected pre-filtered to count > 1 by the caller (matching the
-// "only show pairs that occurred more than once" rule) — no backend endpoint
-// computes this yet, see Dashboard.tsx for the current mock/TODO status.
+// pairs comes from GET /api/learner/{id}/confusion-pairs — grouped/counted
+// target-vs-predicted pairs from failed attempts, top 5 by count descending.
 export function ConfusionPanel({ pairs }: ConfusionPanelProps) {
   return (
     <div className="panel">

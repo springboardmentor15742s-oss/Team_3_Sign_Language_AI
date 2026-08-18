@@ -4,9 +4,11 @@ from sqlalchemy.orm import Session
 from app.database import get_db
 from app.models.user import User
 from app.schemas.analytics import LearnerAnalyticsResponse
+from app.schemas.confusion import ConfusionPairsResponse
 from app.schemas.learning_plan import LearningPlanResponse
 from app.schemas.recommendation import RecommendationsResponse
 from app.services.auth_dependency import require_self_or_staff
+from app.services.confusion_service import get_confusion_pairs
 from app.services.learning_analytics_service import get_learner_analytics
 from app.services.learning_plan_service import generate_learning_plan
 from app.services.recommendation_service import get_recommendations
@@ -36,3 +38,11 @@ def get_learner_learning_plan(
     current_user: User = Depends(require_self_or_staff),
 ):
     return generate_learning_plan(db, learner_id)
+
+@router.get("/{learner_id}/confusion-pairs", response_model=ConfusionPairsResponse)
+def get_learner_confusion_pairs(
+    learner_id: str,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_self_or_staff),
+):
+    return get_confusion_pairs(db, learner_id)

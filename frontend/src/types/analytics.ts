@@ -54,7 +54,8 @@ export interface Recommendations {
   recommendations: RecommendationItem[];
 }
 
-// Not backed by a real endpoint yet — see ConfusionPanel.tsx note.
+// Mirrors backend/app/schemas/confusion.py
+
 export interface ConfusionPair {
   target_letter: string;
   predicted_letter: string;
