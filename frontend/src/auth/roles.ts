@@ -4,3 +4,8 @@
 // deliberately excludes accessibility_trainer, which has no defined home
 // route yet.
 export const INSTRUCTOR_ROLES = ['instructor', 'admin'];
+
+// Roles that land on the platform admin overview (/admin) — narrower than
+// INSTRUCTOR_ROLES. Matches the backend's require_role("admin") on
+// GET /api/admin/overview.
+export const ADMIN_ROLES = ['admin'];

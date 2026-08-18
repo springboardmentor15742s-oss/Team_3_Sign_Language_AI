@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import client from '../api/client';
+import '../components/DataTable.css';
 import { Topbar } from '../components/Topbar';
 import { LearnerRosterEntry, LearnerRosterResponse } from '../types/instructor';
 import './Instructor.css';
@@ -49,17 +50,17 @@ export function Instructor() {
           who haven&rsquo;t attempted anything yet are listed at the bottom.
         </p>
 
-        {loadError && <p className="roster-status roster-status--error">{loadError}</p>}
+        {loadError && <p className="status-message status-message--error">{loadError}</p>}
 
-        {!loadError && learners === null && <p className="roster-status">Loading roster&hellip;</p>}
+        {!loadError && learners === null && <p className="status-message">Loading roster&hellip;</p>}
 
         {!loadError && learners !== null && learners.length === 0 && (
-          <p className="roster-status">No learners yet.</p>
+          <p className="status-message">No learners yet.</p>
         )}
 
         {!loadError && learners !== null && learners.length > 0 && (
-          <div className="roster-table-wrap">
-            <table className="roster-table">
+          <div className="data-table-wrap">
+            <table className="data-table">
               <thead>
                 <tr>
                   <th>Name</th>
@@ -80,19 +81,19 @@ export function Instructor() {
                     <tr key={learner.learner_id}>
                       <td>{learner.name}</td>
                       <td>{learner.email}</td>
-                      <td className="roster-table__numeric">{learner.total_attempts}</td>
+                      <td className="data-table__numeric">{learner.total_attempts}</td>
                       <td
-                        className={`roster-table__numeric${isWeakAccuracy ? ' roster-table__numeric--weak' : ''}`}
+                        className={`data-table__numeric${isWeakAccuracy ? ' data-table__numeric--weak' : ''}`}
                       >
                         {learner.overall_accuracy_percent === null
                           ? '—'
                           : `${learner.overall_accuracy_percent}%`}
                       </td>
-                      <td className="roster-table__numeric">
+                      <td className="data-table__numeric">
                         {learner.letters_scored}/{learner.total_letters}
                       </td>
                       <td
-                        className={`roster-table__numeric${learner.weak_area_count > 0 ? ' roster-table__numeric--weak' : ''}`}
+                        className={`data-table__numeric${learner.weak_area_count > 0 ? ' data-table__numeric--weak' : ''}`}
                       >
                         {learner.weak_area_count}
                       </td>

@@ -28,3 +28,13 @@ code {
     padding: var(--space-4);
   }
 }
+
+.status-message {
+  font-family: var(--font-heading);
+  font-size: 0.95rem;
+  color: var(--color-text-dim);
+}
+
+.status-message--error {
+  color: var(--color-warn);
+}

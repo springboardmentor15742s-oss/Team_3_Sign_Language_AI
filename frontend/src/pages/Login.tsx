@@ -1,7 +1,13 @@
 import React, { useState, FormEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../auth/AuthContext';
-import { INSTRUCTOR_ROLES } from '../auth/roles';
+import { ADMIN_ROLES, INSTRUCTOR_ROLES } from '../auth/roles';
+
+function homeRouteFor(role: string): string {
+  if (ADMIN_ROLES.includes(role)) return '/admin';
+  if (INSTRUCTOR_ROLES.includes(role)) return '/instructor';
+  return '/dashboard';
+}
 
 export function Login() {
   const [email, setEmail] = useState('');
@@ -15,7 +21,7 @@ export function Login() {
     setError(null);
     try {
       const loggedInUser = await login(email, password);
-      navigate(INSTRUCTOR_ROLES.includes(loggedInUser.role) ? '/instructor' : '/dashboard');
+      navigate(homeRouteFor(loggedInUser.role));
     } catch (err) {
       setError('Login failed. Check your email and password.');
     }

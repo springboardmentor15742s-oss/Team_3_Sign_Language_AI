@@ -26,6 +26,8 @@ from app.routers import learner
 app.include_router(learner.router)
 from app.routers import instructor
 app.include_router(instructor.router)
+from app.routers import admin
+app.include_router(admin.router)
 
 @app.get("/")
 def root():

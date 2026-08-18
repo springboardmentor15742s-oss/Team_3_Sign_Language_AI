@@ -2,11 +2,12 @@ import React from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider } from './auth/AuthContext';
 import { ProtectedRoute } from './auth/ProtectedRoute';
-import { INSTRUCTOR_ROLES } from './auth/roles';
+import { ADMIN_ROLES, INSTRUCTOR_ROLES } from './auth/roles';
 import { Login } from './pages/Login';
 import { Dashboard } from './pages/Dashboard';
 import { Practice } from './pages/Practice';
 import { Instructor } from './pages/Instructor';
+import { Admin } from './pages/Admin';
 
 function App() {
   return (
@@ -35,6 +36,14 @@ function App() {
             element={
               <ProtectedRoute roles={INSTRUCTOR_ROLES} redirectTo="/dashboard">
                 <Instructor />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/admin"
+            element={
+              <ProtectedRoute roles={ADMIN_ROLES} redirectTo="/dashboard">
+                <Admin />
               </ProtectedRoute>
             }
           />

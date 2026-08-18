@@ -4,6 +4,7 @@ import { useAuth } from '../auth/AuthContext';
 import { AlphabetBoard } from '../components/AlphabetBoard';
 import { PracticeNextPanel } from '../components/PracticeNextPanel';
 import { ConfusionPanel } from '../components/ConfusionPanel';
+import { StatsRow, StatTile } from '../components/StatsRow';
 import { Topbar } from '../components/Topbar';
 import { ConfusionPair, LearnerAnalytics, RecommendationItem } from '../types/analytics';
 import './Dashboard.css';
@@ -47,7 +48,7 @@ export function Dashboard() {
     return (
       <div className="page dashboard">
         <Topbar title="Learner Dashboard" />
-        <p className="dashboard__status">Loading your stats&hellip;</p>
+        <p className="status-message">Loading your stats&hellip;</p>
       </div>
     );
   }
@@ -56,7 +57,7 @@ export function Dashboard() {
     return (
       <div className="page dashboard">
         <Topbar title="Learner Dashboard" />
-        <p className="dashboard__status dashboard__status--error">{loadError}</p>
+        <p className="status-message status-message--error">{loadError}</p>
       </div>
     );
   }
@@ -74,30 +75,29 @@ export function Dashboard() {
     <div className="page dashboard">
       <Topbar title="Learner Dashboard" />
 
-      <section className="stats-row">
-        <div className="stat-tile">
-          <span className="stat-tile__value stat-tile__value--accent">
-            {analytics.overall_accuracy_percent ?? '—'}
-            {analytics.overall_accuracy_percent !== null && <span className="stat-tile__unit">%</span>}
-          </span>
-          <span className="stat-tile__label">Lifetime accuracy</span>
-        </div>
-        <div className="stat-tile">
-          <span className="stat-tile__value">{analytics.total_attempts}</span>
-          <span className="stat-tile__label">Attempts</span>
-        </div>
-        <div className="stat-tile">
-          <span className="stat-tile__value">
-            {scoredLetterCount}
-            <span className="stat-tile__unit">/{letterCount}</span>
-          </span>
-          <span className="stat-tile__label">Letters scored</span>
-        </div>
-        <div className="stat-tile">
-          <span className="stat-tile__value stat-tile__value--warn">{analytics.weak_areas.length}</span>
-          <span className="stat-tile__label">Weak areas</span>
-        </div>
-      </section>
+      <StatsRow>
+        <StatTile
+          variant="accent"
+          value={
+            <>
+              {analytics.overall_accuracy_percent ?? '—'}
+              {analytics.overall_accuracy_percent !== null && <span className="stat-tile__unit">%</span>}
+            </>
+          }
+          label="Lifetime accuracy"
+        />
+        <StatTile value={analytics.total_attempts} label="Attempts" />
+        <StatTile
+          value={
+            <>
+              {scoredLetterCount}
+              <span className="stat-tile__unit">/{letterCount}</span>
+            </>
+          }
+          label="Letters scored"
+        />
+        <StatTile variant="warn" value={analytics.weak_areas.length} label="Weak areas" />
+      </StatsRow>
 
       <section className="board-section">
         <AlphabetBoard perLetter={analytics.per_letter} />
