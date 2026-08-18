@@ -30,15 +30,25 @@ async def submit_practice_attempt(
     gesture_result = recognize_gesture(decoded_image)
     assessment = assess_sign(gesture_result, target_letter)
     feedback_text = generate_feedback(assessment)
-    attempt = save_practice_attempt(db, current_user.id, assessment)
+
+    # no_attempt_detected means no hand was found — that's not an attempt,
+    # so it isn't logged (it would otherwise inflate attempt counts and
+    # skew the recommendation engine's never/rarely-attempted tiers, even
+    # though it's already excluded from accuracy math).
+    attempt_id = None
+    created_at = None
+    if assessment["status"] != "no_attempt_detected":
+        attempt = save_practice_attempt(db, current_user.id, assessment)
+        attempt_id = attempt.id
+        created_at = attempt.created_at
 
     return PracticeFeedbackResponse(
-        attempt_id=attempt.id,
+        attempt_id=attempt_id,
         status=assessment["status"],
         correct=assessment["correct"],
         confidence=assessment["confidence"],
         target_letter=assessment["target_letter"],
         predicted_letter=assessment["predicted_letter"],
         feedback=feedback_text,
-        created_at=attempt.created_at,
+        created_at=created_at,
     )

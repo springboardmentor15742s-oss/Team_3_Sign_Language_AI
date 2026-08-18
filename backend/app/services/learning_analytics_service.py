@@ -4,6 +4,7 @@ from sqlalchemy.orm import Session
 
 from app.models.practice_attempt import PracticeAttempt
 from app.services.assessment_report_service import generate_session_report
+from app.services.gesture_recognition_service import get_supported_letters
 
 WEAK_AREA_ACCURACY_THRESHOLD = 70.0
 WEAK_AREA_MIN_SCORED_ATTEMPTS = 3  # avoid flagging a letter on a single unlucky miss
@@ -28,6 +29,11 @@ def get_learner_analytics(db: Session, learner_id: str) -> dict:
     including which letters are practiced most/least and which are
     "weak areas" (accuracy below WEAK_AREA_ACCURACY_THRESHOLD with at
     least WEAK_AREA_MIN_SCORED_ATTEMPTS scored attempts).
+
+    per_letter always covers all of get_supported_letters(), not just
+    letters the learner has tried — unattempted letters appear with
+    attempts=0 and accuracy_percent=None, so the frontend never needs
+    its own hardcoded class list to render a complete picture.
 
     Reuses assessment_report_service.generate_session_report for the
     overall and per-letter aggregation (same accuracy semantics: computed
@@ -61,7 +67,10 @@ def get_learner_analytics(db: Session, learner_id: str) -> dict:
             "accuracy_percent": day_report["overall_accuracy_percent"],
         })
 
-    per_letter = overall["per_letter"]
+    per_letter = dict(overall["per_letter"])
+    for letter in get_supported_letters():
+        per_letter.setdefault(letter, {"attempts": 0, "correct": 0, "incorrect": 0, "no_attempt": 0, "accuracy_percent": None})
+    per_letter = dict(sorted(per_letter.items()))
 
     letters_by_practice_count = sorted(
         per_letter.items(), key=lambda item: item[1]["attempts"], reverse=True

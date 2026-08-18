@@ -1,6 +1,5 @@
 from sqlalchemy.orm import Session
 
-from app.services.gesture_recognition_service import get_supported_letters
 from app.services.learning_analytics_service import get_learner_analytics
 
 MAX_RECOMMENDATIONS = 5
@@ -23,8 +22,6 @@ def get_recommendations(db: Session, learner_id: str) -> dict:
     """
     analytics = get_learner_analytics(db, learner_id)
     per_letter = analytics["per_letter"]
-    attempted_letters = set(per_letter.keys())
-    supported_letters = set(get_supported_letters())
 
     candidates = []
 
@@ -35,13 +32,18 @@ def get_recommendations(db: Session, learner_id: str) -> dict:
         })
     weak_letters = {c["letter"] for c in candidates}
 
-    never_attempted = sorted(supported_letters - attempted_letters)
+    # per_letter covers all supported letters (learning_analytics_service
+    # backfills unattempted ones with attempts=0), so "never attempted" is
+    # attempts == 0, not absence from the dict.
+    never_attempted = sorted(
+        letter for letter, stats in per_letter.items() if stats["attempts"] == 0
+    )
     for letter in never_attempted:
         candidates.append({"letter": letter, "reason": "not yet practiced"})
 
     rarely_attempted = sorted(
         letter for letter, stats in per_letter.items()
-        if letter not in weak_letters and stats["attempts"] < RARE_ATTEMPT_THRESHOLD
+        if letter not in weak_letters and 0 < stats["attempts"] < RARE_ATTEMPT_THRESHOLD
     )
     for letter in rarely_attempted:
         attempts = per_letter[letter]["attempts"]

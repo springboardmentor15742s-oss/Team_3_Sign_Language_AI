@@ -1,0 +1,98 @@
+.alphabet-board {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: var(--space-3);
+}
+
+.board-cell {
+  position: relative;
+  aspect-ratio: 1 / 1;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--color-border);
+  background: var(--color-surface);
+  overflow: hidden;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  cursor: default;
+  transition: border-color 150ms ease, transform 150ms ease;
+}
+
+.board-cell:hover {
+  border-color: var(--color-accent-dim);
+  transform: translateY(-1px);
+}
+
+.board-cell--untried {
+  border-style: dashed;
+  border-color: var(--color-text-faint);
+  background: transparent;
+}
+
+.board-cell__fill {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: var(--color-accent);
+  opacity: 0.28;
+  transition: height 300ms ease;
+}
+
+.board-cell--weak .board-cell__fill {
+  background: var(--color-warn);
+  opacity: 0.4;
+}
+
+.board-cell__letter {
+  position: relative;
+  z-index: 1;
+  margin-top: var(--space-2);
+  font-family: var(--font-mono);
+  font-size: 1.1rem;
+  font-weight: 500;
+  color: var(--color-text);
+  text-transform: uppercase;
+}
+
+.board-cell--untried .board-cell__letter {
+  color: var(--color-text-faint);
+}
+
+.board-cell__tooltip {
+  position: absolute;
+  bottom: calc(100% + var(--space-2));
+  left: 50%;
+  transform: translateX(-50%) translateY(4px);
+  background: var(--color-surface-raised);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  padding: var(--space-1) var(--space-2);
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  white-space: nowrap;
+  color: var(--color-text);
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transition: opacity 120ms ease, transform 120ms ease;
+  z-index: 2;
+}
+
+.board-cell:hover .board-cell__tooltip {
+  opacity: 1;
+  visibility: visible;
+  transform: translateX(-50%) translateY(0);
+}
+
+@media (max-width: 860px) {
+  .alphabet-board {
+    grid-template-columns: repeat(4, 1fr);
+  }
+}
+
+@media (max-width: 480px) {
+  .alphabet-board {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}

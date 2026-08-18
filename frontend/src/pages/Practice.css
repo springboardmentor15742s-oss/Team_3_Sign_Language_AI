@@ -1,0 +1,204 @@
+.camera-panel {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  padding: var(--space-5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 480px;
+}
+
+.camera-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-4);
+  text-align: center;
+  max-width: 420px;
+}
+
+.camera-state__text {
+  margin: 0;
+  font-family: var(--font-heading);
+  font-size: 1rem;
+  color: var(--color-text);
+}
+
+.camera-state--warn .camera-state__text {
+  color: var(--color-warn);
+}
+
+.camera-state__hint {
+  margin: 0;
+  font-family: var(--font-mono);
+  font-size: 0.85rem;
+  color: var(--color-text-dim);
+}
+
+.camera-state__action {
+  background: var(--color-accent);
+  border: none;
+  color: var(--color-bg);
+  font-family: var(--font-heading);
+  font-weight: 600;
+  font-size: 0.9rem;
+  padding: var(--space-3) var(--space-5);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: opacity 150ms ease;
+}
+
+.camera-state__action:hover {
+  opacity: 0.85;
+}
+
+.camera-state__action:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.camera-state__action--ghost {
+  background: transparent;
+  border: 1px solid var(--color-border);
+  color: var(--color-text);
+}
+
+.camera-state__action--ghost:hover {
+  opacity: 1;
+  border-color: var(--color-accent-dim);
+}
+
+.camera-stage {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-4);
+}
+
+.capture-controls {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.capture-controls__target {
+  font-family: var(--font-heading);
+  font-size: 1rem;
+  color: var(--color-text);
+}
+
+.capture-controls__target strong {
+  font-family: var(--font-mono);
+  color: var(--color-accent);
+  font-size: 1.15rem;
+}
+
+.capture-controls__reason {
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  color: var(--color-text-dim);
+}
+
+.debug-output {
+  background: var(--color-surface-raised);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  padding: var(--space-3);
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  color: var(--color-text-dim);
+  max-width: 480px;
+  max-height: 240px;
+  overflow: auto;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.debug-output--error {
+  color: var(--color-warn);
+  border-color: var(--color-warn-dim);
+}
+
+.result {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-3);
+  text-align: center;
+  max-width: 420px;
+  padding: var(--space-5);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--color-border);
+  background: var(--color-surface-raised);
+}
+
+.result__badge {
+  font-family: var(--font-heading);
+  font-weight: 600;
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  padding: var(--space-1) var(--space-3);
+  border-radius: 999px;
+  background: var(--color-surface);
+  color: var(--color-text-dim);
+}
+
+.result--pass .result__badge {
+  color: var(--color-accent);
+  background: rgba(255, 180, 0, 0.14);
+}
+
+.result--fail .result__badge {
+  color: var(--color-warn);
+  background: rgba(226, 96, 74, 0.14);
+}
+
+.result__feedback {
+  margin: 0;
+  font-family: var(--font-heading);
+  font-size: 0.95rem;
+  color: var(--color-text);
+}
+
+.result__meta {
+  margin: 0;
+  font-family: var(--font-mono);
+  font-size: 0.8rem;
+  color: var(--color-text-dim);
+}
+
+.result__meta strong {
+  color: var(--color-text);
+}
+
+.result__actions {
+  display: flex;
+  gap: var(--space-3);
+  margin-top: var(--space-2);
+}
+
+.camera-video {
+  display: none;
+  width: 100%;
+  max-width: 640px;
+  aspect-ratio: 4 / 3;
+  object-fit: cover;
+  border-radius: var(--radius-md);
+  background: #000;
+  /* Display-only mirror for a natural self-view — captured frames are
+     sent unflipped, since the model was trained on unmirrored images. */
+  transform: scaleX(-1);
+}
+
+.camera-video--visible {
+  display: block;
+}
+
+@media (max-width: 860px) {
+  .camera-panel {
+    min-height: 320px;
+  }
+}
