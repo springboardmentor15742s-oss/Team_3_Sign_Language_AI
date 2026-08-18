@@ -11,7 +11,7 @@ export interface AuthUser {
 interface AuthContextType {
   token: string | null;
   user: AuthUser | null;
-  login: (email: string, password: string) => Promise<void>;
+  login: (email: string, password: string) => Promise<AuthUser>;
   logout: () => void;
 }
 
@@ -24,7 +24,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return stored ? JSON.parse(stored) : null;
   });
 
-  const login = async (email: string, password: string) => {
+  const login = async (email: string, password: string): Promise<AuthUser> => {
     const response = await client.post('/api/auth/login', { email, password });
     const { access_token, user: loggedInUser } = response.data;
 
@@ -32,6 +32,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     localStorage.setItem('auth_user', JSON.stringify(loggedInUser));
     setToken(access_token);
     setUser(loggedInUser);
+
+    return loggedInUser;
   };
 
   const logout = () => {
