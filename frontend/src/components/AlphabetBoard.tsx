@@ -1,4 +1,5 @@
 import React from 'react';
+import { Link } from 'react-router-dom';
 import { LetterStats } from '../types/analytics';
 import './AlphabetBoard.css';
 
@@ -25,8 +26,9 @@ export function AlphabetBoard({ perLetter }: AlphabetBoardProps) {
           : `${stats.accuracy_percent}% accuracy · ${stats.attempts} attempt${stats.attempts === 1 ? '' : 's'}`;
 
         return (
-          <div
+          <Link
             key={letter}
+            to={`/practice?letter=${letter}`}
             className={`board-cell${untried ? ' board-cell--untried' : ''}${isWeak ? ' board-cell--weak' : ''}`}
           >
             {!untried && (
@@ -34,7 +36,7 @@ export function AlphabetBoard({ perLetter }: AlphabetBoardProps) {
             )}
             <span className="board-cell__letter">{letter}</span>
             <div className="board-cell__tooltip">{tooltip}</div>
-          </div>
+          </Link>
         );
       })}
     </div>

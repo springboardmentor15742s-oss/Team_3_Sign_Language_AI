@@ -101,6 +101,23 @@
   color: var(--color-text-dim);
 }
 
+.capture-controls__hint {
+  margin: 0;
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  color: var(--color-text-dim);
+}
+
+.capture-controls__hint kbd {
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  padding: 1px 6px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background: var(--color-surface-raised);
+  color: var(--color-text-dim);
+}
+
 .debug-output {
   background: var(--color-surface-raised);
   border: 1px solid var(--color-border);
@@ -132,6 +149,24 @@
   border-radius: var(--radius-md);
   border: 1px solid var(--color-border);
   background: var(--color-surface-raised);
+  animation: result-appear 180ms ease-out;
+}
+
+@keyframes result-appear {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .result {
+    animation: none;
+  }
 }
 
 .result__badge {
@@ -174,10 +209,65 @@
   color: var(--color-text);
 }
 
+.confidence-meter {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  width: 100%;
+  max-width: 240px;
+}
+
+.confidence-meter__track {
+  flex: 1;
+  height: 8px;
+  border-radius: 999px;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  overflow: hidden;
+}
+
+.confidence-meter__fill {
+  height: 100%;
+  transition: width 200ms ease;
+}
+
+.confidence-meter__fill--pass {
+  background: var(--color-accent);
+}
+
+.confidence-meter__fill--fail {
+  background: var(--color-warn);
+}
+
+.confidence-meter__value {
+  font-family: var(--font-mono);
+  font-size: 0.8rem;
+  color: var(--color-text-dim);
+  min-width: 3ch;
+  text-align: right;
+}
+
+.result__progress {
+  margin: 0;
+  font-family: var(--font-mono);
+  font-size: 0.85rem;
+  color: var(--color-text-dim);
+}
+
+.result__progress strong {
+  color: var(--color-text);
+}
+
 .result__actions {
   display: flex;
   gap: var(--space-3);
   margin-top: var(--space-2);
+}
+
+.camera-video-wrap {
+  position: relative;
+  width: 100%;
+  max-width: 640px;
 }
 
 .camera-video {
@@ -195,6 +285,28 @@
 
 .camera-video--visible {
   display: block;
+}
+
+/* Corner badge, not a centered overlay — the countdown needs to be
+   clearly visible without sitting over where the hand actually is
+   (typically center/lower-center of frame). */
+.countdown-badge {
+  position: absolute;
+  top: var(--space-3);
+  right: var(--space-3);
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--color-surface-raised);
+  border: 2px solid var(--color-accent);
+  font-family: var(--font-mono);
+  font-size: 1.75rem;
+  font-weight: 600;
+  color: var(--color-accent);
+  z-index: 3;
 }
 
 @media (max-width: 860px) {

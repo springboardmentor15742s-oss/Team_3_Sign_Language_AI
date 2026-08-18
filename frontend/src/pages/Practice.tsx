@@ -1,9 +1,10 @@
 import axios from 'axios';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import client from '../api/client';
 import { useAuth } from '../auth/AuthContext';
 import { Topbar } from '../components/Topbar';
-import { Recommendations, RecommendationItem } from '../types/analytics';
+import { LearnerAnalytics, Recommendations, RecommendationItem } from '../types/analytics';
 import { PracticeFeedback } from '../types/practice';
 import './Practice.css';
 
@@ -16,11 +17,35 @@ interface CaptureError {
 type CameraState = 'idle' | 'requesting' | 'active' | 'denied' | 'no-device' | 'error';
 
 const CAPTURE_WIDTH = 640;
+const COUNTDOWN_START = 3;
+const COUNTDOWN_TICK_MS = 1000;
+
+const EXPLICIT_REASON = 'Chosen from your dashboard';
 
 const FALLBACK_RECOMMENDATION: RecommendationItem = {
   letter: 'A',
   reason: 'Could not load a recommendation — starting from A.',
 };
+
+interface AccuracySnapshot {
+  letter: string;
+  accuracy: number | null;
+}
+
+function ConfidenceMeter({ value, variant }: { value: number; variant: 'pass' | 'fail' }) {
+  const percent = Math.round(value * 100);
+  return (
+    <div className="confidence-meter">
+      <div className="confidence-meter__track">
+        <div
+          className={`confidence-meter__fill confidence-meter__fill--${variant}`}
+          style={{ width: `${percent}%` }}
+        />
+      </div>
+      <span className="confidence-meter__value">{percent}%</span>
+    </div>
+  );
+}
 
 // Draws the current video frame to an off-DOM canvas, downscaled to
 // CAPTURE_WIDTH wide (aspect ratio preserved), and exports it as a JPEG
@@ -53,6 +78,8 @@ function captureFrame(video: HTMLVideoElement): Promise<Blob> {
 
 export function Practice() {
   const { user } = useAuth();
+  const [searchParams] = useSearchParams();
+  const explicitLetter = searchParams.get('letter');
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const [cameraState, setCameraState] = useState<CameraState>('idle');
@@ -62,6 +89,23 @@ export function Practice() {
   const [recommendationError, setRecommendationError] = useState<string | null>(null);
   const [result, setResult] = useState<PracticeFeedback | null>(null);
   const [captureError, setCaptureError] = useState<CaptureError | null>(null);
+  const [countdown, setCountdown] = useState<number | null>(null);
+  const [beforeAccuracy, setBeforeAccuracy] = useState<AccuracySnapshot | null>(null);
+  const [afterAccuracy, setAfterAccuracy] = useState<AccuracySnapshot | null>(null);
+
+  const fetchLetterAccuracy = useCallback(
+    async (letter: string): Promise<number | null> => {
+      if (!user) return null;
+      try {
+        const response = await client.get<LearnerAnalytics>(`/api/learner/${user.id}/analytics`);
+        return response.data.per_letter[letter]?.accuracy_percent ?? null;
+      } catch (err) {
+        console.error('Failed to fetch letter accuracy:', err);
+        return null;
+      }
+    },
+    [user]
+  );
 
   const fetchRecommendation = useCallback(async () => {
     if (!user) return;
@@ -79,10 +123,34 @@ export function Practice() {
     }
   }, [user]);
 
-  // Load the first target letter as soon as we know who's practicing.
+  // Load the first target letter as soon as we know who's practicing —
+  // honour an explicit ?letter= from the dashboard instead of asking the
+  // recommendation endpoint. Once this attempt is logged, performCapture's
+  // post-capture refetch naturally replaces this with a real, algorithm
+  // -driven pick for whatever comes next.
   useEffect(() => {
+    if (explicitLetter) {
+      setRecommendation({ letter: explicitLetter, reason: EXPLICIT_REASON });
+      return;
+    }
     fetchRecommendation();
-  }, [fetchRecommendation]);
+  }, [explicitLetter, fetchRecommendation]);
+
+  // Snapshots this letter's accuracy right before each capture opportunity
+  // (initial load, and again after Try Again / Next Letter clear the prior
+  // result) so the result card can show the before -> after change once
+  // this attempt is logged, without a second round trip at display time.
+  useEffect(() => {
+    if (result || !recommendation) return;
+    const letter = recommendation.letter;
+    let cancelled = false;
+    fetchLetterAccuracy(letter).then((accuracy) => {
+      if (!cancelled) setBeforeAccuracy({ letter, accuracy });
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [result, recommendation, fetchLetterAccuracy]);
 
   const stopStream = useCallback(() => {
     streamRef.current?.getTracks().forEach((track) => track.stop());
@@ -117,7 +185,9 @@ export function Practice() {
     return () => stopStream();
   }, [stopStream]);
 
-  const handleCapture = useCallback(async () => {
+  // The actual frame-grab + POST — runs once the countdown reaches zero,
+  // not directly on trigger (see triggerCapture below).
+  const performCapture = useCallback(async () => {
     if (!videoRef.current || submitting || !recommendation) return;
 
     setSubmitting(true);
@@ -134,10 +204,15 @@ export function Practice() {
       console.log('gesture recognition response:', response.data);
       setResult(response.data);
 
-      // no_attempt_detected isn't logged, so the recommendation can't have
-      // changed — only refetch when an attempt actually landed in the DB.
+      // no_attempt_detected isn't logged, so the recommendation — and this
+      // letter's accuracy — can't have changed; only refetch when an
+      // attempt actually landed in the DB.
       if (response.data.status !== 'no_attempt_detected') {
         fetchRecommendation();
+        const capturedLetter = response.data.target_letter;
+        fetchLetterAccuracy(capturedLetter).then((accuracy) => {
+          setAfterAccuracy({ letter: capturedLetter, accuracy });
+        });
       }
     } catch (err) {
       console.error('Capture/send failed:', err);
@@ -167,7 +242,47 @@ export function Practice() {
     } finally {
       setSubmitting(false);
     }
-  }, [submitting, recommendation, fetchRecommendation]);
+  }, [submitting, recommendation, fetchRecommendation, fetchLetterAccuracy]);
+
+  // Starts the 3-2-1 countdown; the actual capture fires when it elapses.
+  // Guarded the same way for both the button click and the spacebar
+  // shortcut, so neither can double-trigger or interrupt an in-progress
+  // countdown/submission.
+  const triggerCapture = useCallback(() => {
+    if (submitting || !recommendation || result || countdown !== null) return;
+    setCountdown(COUNTDOWN_START);
+  }, [submitting, recommendation, result, countdown]);
+
+  useEffect(() => {
+    if (countdown === null) return;
+
+    const timer = setTimeout(() => {
+      if (countdown <= 1) {
+        setCountdown(null);
+        performCapture();
+      } else {
+        setCountdown(countdown - 1);
+      }
+    }, COUNTDOWN_TICK_MS);
+
+    return () => clearTimeout(timer);
+  }, [countdown, performCapture]);
+
+  // Spacebar triggers capture too — signing one-handed while clicking with
+  // the other is awkward. preventDefault only when we're actually going to
+  // act on it, so Space still behaves normally (e.g. activating a focused
+  // "Try again" button) in every other state.
+  useEffect(() => {
+    function handleKeyDown(event: KeyboardEvent) {
+      if (event.code !== 'Space') return;
+      if (cameraState !== 'active' || result || !recommendation || submitting || countdown !== null) return;
+      event.preventDefault();
+      triggerCapture();
+    }
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [cameraState, result, recommendation, submitting, countdown, triggerCapture]);
 
   const handleTryAgain = useCallback(() => {
     setResult(null);
@@ -239,13 +354,20 @@ export function Practice() {
         )}
 
         <div className="camera-stage">
-          <video
-            ref={videoRef}
-            className={`camera-video${cameraState === 'active' ? ' camera-video--visible' : ''}`}
-            autoPlay
-            playsInline
-            muted
-          />
+          <div className="camera-video-wrap">
+            <video
+              ref={videoRef}
+              className={`camera-video${cameraState === 'active' ? ' camera-video--visible' : ''}`}
+              autoPlay
+              playsInline
+              muted
+            />
+            {countdown !== null && (
+              <div className="countdown-badge" aria-live="assertive">
+                {countdown}
+              </div>
+            )}
+          </div>
 
           {cameraState === 'active' && !result && !recommendation && (
             <div className="capture-controls">
@@ -264,9 +386,17 @@ export function Practice() {
                 <p className="status-message status-message--error">{recommendationError}</p>
               )}
 
-              <button className="camera-state__action" onClick={handleCapture} disabled={submitting}>
-                {submitting ? 'Checking…' : 'Capture'}
+              <button
+                className="camera-state__action"
+                onClick={triggerCapture}
+                disabled={submitting || countdown !== null}
+              >
+                {submitting ? 'Checking…' : countdown !== null ? `Capturing in ${countdown}…` : 'Capture'}
               </button>
+
+              <p className="capture-controls__hint">
+                or press <kbd>Space</kbd> to capture
+              </p>
 
               {captureError && (
                 <pre className="debug-output debug-output--error">
@@ -279,14 +409,12 @@ export function Practice() {
           )}
 
           {cameraState === 'active' && result && (
-            <div className={`result result--${result.status}`}>
+            <div key={result.attempt_id ?? `${result.status}-${result.target_letter}`} className={`result result--${result.status}`}>
               {result.status === 'pass' && (
                 <>
                   <span className="result__badge">Correct</span>
                   <p className="result__feedback">{result.feedback}</p>
-                  <p className="result__meta">
-                    Confidence: <strong>{Math.round((result.confidence ?? 0) * 100)}%</strong>
-                  </p>
+                  {result.confidence !== null && <ConfidenceMeter value={result.confidence} variant="pass" />}
                 </>
               )}
 
@@ -298,6 +426,7 @@ export function Practice() {
                     Target: <strong>{result.target_letter}</strong> &middot; You signed:{' '}
                     <strong>{result.predicted_letter ?? '—'}</strong>
                   </p>
+                  {result.confidence !== null && <ConfidenceMeter value={result.confidence} variant="fail" />}
                 </>
               )}
 
@@ -307,6 +436,17 @@ export function Practice() {
                   <p className="result__feedback">{result.feedback}</p>
                 </>
               )}
+
+              {(result.status === 'pass' || result.status === 'fail') &&
+                beforeAccuracy?.letter === result.target_letter &&
+                afterAccuracy?.letter === result.target_letter && (
+                  <p className="result__progress">
+                    {result.target_letter}:{' '}
+                    <strong>{beforeAccuracy.accuracy !== null ? `${beforeAccuracy.accuracy}%` : '—'}</strong>
+                    {' → '}
+                    <strong>{afterAccuracy.accuracy !== null ? `${afterAccuracy.accuracy}%` : '—'}</strong>
+                  </p>
+                )}
 
               <div className="result__actions">
                 <button className="camera-state__action camera-state__action--ghost" onClick={handleTryAgain}>
