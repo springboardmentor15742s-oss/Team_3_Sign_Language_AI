@@ -38,3 +38,14 @@ code {
 .status-message--error {
   color: var(--color-warn);
 }
+
+/* Reserves realistic space for a page's main content while it's still
+   loading, so the transition from "loading" to "loaded" doesn't collapse
+   and re-expand the page — no data-shaped placeholders required, just
+   enough height that the layout doesn't jump. */
+.content-loading {
+  min-height: 50vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}

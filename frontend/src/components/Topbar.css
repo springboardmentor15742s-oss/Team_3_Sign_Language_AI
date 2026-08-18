@@ -24,6 +24,31 @@
   color: var(--color-text);
 }
 
+.topbar__nav {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+}
+
+.topbar__nav-link {
+  font-family: var(--font-heading);
+  font-size: 0.85rem;
+  color: var(--color-text-dim);
+  text-decoration: none;
+  padding-bottom: var(--space-1);
+  border-bottom: 2px solid transparent;
+  transition: color 150ms ease, border-color 150ms ease;
+}
+
+.topbar__nav-link:hover {
+  color: var(--color-text);
+}
+
+.topbar__nav-link--active {
+  color: var(--color-accent);
+  border-bottom-color: var(--color-accent);
+}
+
 .topbar__account {
   display: flex;
   align-items: center;

@@ -1,5 +1,5 @@
 import React, { useState, FormEvent } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../auth/AuthContext';
 import { ADMIN_ROLES, INSTRUCTOR_ROLES } from '../auth/roles';
 
@@ -54,6 +54,9 @@ export function Login() {
         <button type="submit">Log in</button>
       </form>
       {error && <p>{error}</p>}
+      <p>
+        Don&rsquo;t have an account? <Link to="/register">Register</Link>
+      </p>
     </div>
   );
 }

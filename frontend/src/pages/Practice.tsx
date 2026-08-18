@@ -59,6 +59,7 @@ export function Practice() {
   const [errorDetail, setErrorDetail] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [recommendation, setRecommendation] = useState<RecommendationItem | null>(null);
+  const [recommendationError, setRecommendationError] = useState<string | null>(null);
   const [result, setResult] = useState<PracticeFeedback | null>(null);
   const [captureError, setCaptureError] = useState<CaptureError | null>(null);
 
@@ -67,8 +68,13 @@ export function Practice() {
     try {
       const response = await client.get<Recommendations>(`/api/learner/${user.id}/recommendations`);
       setRecommendation(response.data.recommendations[0] ?? FALLBACK_RECOMMENDATION);
+      setRecommendationError(null);
     } catch (err) {
       console.error('Failed to fetch recommendation:', err);
+      // Degrade gracefully rather than block practice entirely — capture
+      // still works against the fallback letter — but say so visibly
+      // instead of silently substituting it.
+      setRecommendationError('Could not load your personalized recommendation — using a default letter.');
       setRecommendation((current) => current ?? FALLBACK_RECOMMENDATION);
     }
   }, [user]);
@@ -253,6 +259,11 @@ export function Practice() {
                 Sign the letter <strong>{recommendation.letter}</strong>
               </span>
               <span className="capture-controls__reason">{recommendation.reason}</span>
+
+              {recommendationError && (
+                <p className="status-message status-message--error">{recommendationError}</p>
+              )}
+
               <button className="camera-state__action" onClick={handleCapture} disabled={submitting}>
                 {submitting ? 'Checking…' : 'Capture'}
               </button>

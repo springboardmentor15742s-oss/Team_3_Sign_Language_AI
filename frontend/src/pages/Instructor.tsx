@@ -52,7 +52,11 @@ export function Instructor() {
 
         {loadError && <p className="status-message status-message--error">{loadError}</p>}
 
-        {!loadError && learners === null && <p className="status-message">Loading roster&hellip;</p>}
+        {!loadError && learners === null && (
+          <div className="content-loading">
+            <p className="status-message">Loading roster&hellip;</p>
+          </div>
+        )}
 
         {!loadError && learners !== null && learners.length === 0 && (
           <p className="status-message">No learners yet.</p>

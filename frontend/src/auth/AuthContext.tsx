@@ -12,6 +12,7 @@ interface AuthContextType {
   token: string | null;
   user: AuthUser | null;
   login: (email: string, password: string) => Promise<AuthUser>;
+  register: (name: string, email: string, password: string, role: string) => Promise<AuthUser>;
   logout: () => void;
 }
 
@@ -24,16 +25,25 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return stored ? JSON.parse(stored) : null;
   });
 
+  const applySession = (accessToken: string, sessionUser: AuthUser) => {
+    localStorage.setItem('access_token', accessToken);
+    localStorage.setItem('auth_user', JSON.stringify(sessionUser));
+    setToken(accessToken);
+    setUser(sessionUser);
+  };
+
   const login = async (email: string, password: string): Promise<AuthUser> => {
     const response = await client.post('/api/auth/login', { email, password });
     const { access_token, user: loggedInUser } = response.data;
-
-    localStorage.setItem('access_token', access_token);
-    localStorage.setItem('auth_user', JSON.stringify(loggedInUser));
-    setToken(access_token);
-    setUser(loggedInUser);
-
+    applySession(access_token, loggedInUser);
     return loggedInUser;
+  };
+
+  const register = async (name: string, email: string, password: string, role: string): Promise<AuthUser> => {
+    const response = await client.post('/api/auth/register', { name, email, password, role });
+    const { access_token, user: registeredUser } = response.data;
+    applySession(access_token, registeredUser);
+    return registeredUser;
   };
 
   const logout = () => {
@@ -44,7 +54,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   return (
-    <AuthContext.Provider value={{ token, user, login, logout }}>
+    <AuthContext.Provider value={{ token, user, login, register, logout }}>
       {children}
     </AuthContext.Provider>
   );

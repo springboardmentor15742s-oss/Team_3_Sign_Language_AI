@@ -7,8 +7,19 @@ from app.services.auth_service import hash_password, verify_password, create_acc
 
 router = APIRouter(prefix="/api/auth", tags=["Authentication"])
 
+# Self-service registration only ever creates learner accounts. Instructor
+# and admin accounts are provisioned out of band (direct DB/script access),
+# not through this public, unauthenticated endpoint.
+SELF_SERVICE_ROLES = {"learner"}
+
 @router.post("/register", response_model=Token)
 def register(user_data: UserCreate, db: Session = Depends(get_db)):
+    if user_data.role not in SELF_SERVICE_ROLES:
+        raise HTTPException(
+            status_code=400,
+            detail="Only learner accounts can be self-registered. Contact an administrator for other account types.",
+        )
+
     existing_user = db.query(User).filter(User.email == user_data.email).first()
     if existing_user:
         raise HTTPException(status_code=400, detail="Email already registered")

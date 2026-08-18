@@ -48,7 +48,9 @@ export function Dashboard() {
     return (
       <div className="page dashboard">
         <Topbar title="Learner Dashboard" />
-        <p className="status-message">Loading your stats&hellip;</p>
+        <div className="content-loading">
+          <p className="status-message">Loading your stats&hellip;</p>
+        </div>
       </div>
     );
   }

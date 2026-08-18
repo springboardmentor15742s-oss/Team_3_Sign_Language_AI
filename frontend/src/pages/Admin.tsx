@@ -34,7 +34,11 @@ export function Admin() {
 
       {loadError && <p className="status-message status-message--error">{loadError}</p>}
 
-      {!loadError && overview === null && <p className="status-message">Loading overview&hellip;</p>}
+      {!loadError && overview === null && (
+        <div className="content-loading">
+          <p className="status-message">Loading overview&hellip;</p>
+        </div>
+      )}
 
       {!loadError && overview !== null && (
         <>
