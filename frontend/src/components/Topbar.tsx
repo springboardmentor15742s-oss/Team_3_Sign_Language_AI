@@ -1,6 +1,7 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { NavLink } from 'react-router-dom';
 import { useAuth } from '../auth/AuthContext';
+import { Modal } from './Modal';
 import './Topbar.css';
 
 interface TopbarProps {
@@ -30,6 +31,7 @@ const NAV_LINKS_BY_ROLE: Record<string, NavLinkConfig[]> = {
 export function Topbar({ title }: TopbarProps) {
   const { user, logout } = useAuth();
   const navLinks = user ? NAV_LINKS_BY_ROLE[user.role] ?? [] : [];
+  const [aboutOpen, setAboutOpen] = useState(false);
 
   return (
     <header className="topbar">
@@ -51,11 +53,34 @@ export function Topbar({ title }: TopbarProps) {
         </nav>
       )}
       <div className="topbar__account">
+        <button className="topbar__about" onClick={() => setAboutOpen(true)} aria-label="About this platform">
+          ?
+        </button>
         <span>{user?.email}</span>
         <button className="topbar__logout" onClick={logout}>
           Log out
         </button>
       </div>
+
+      {aboutOpen && (
+        <Modal title="About this platform" onClose={() => setAboutOpen(false)}>
+          <p>
+            This platform helps you practice American Sign Language (ASL) fingerspelling using your
+            webcam, with instant AI feedback on your handshapes.
+          </p>
+          <p>
+            <strong>How it works:</strong> MediaPipe tracks your hand&rsquo;s landmarks from the camera
+            feed, an SVM classifier matches your handshape against the target letter, and you get instant
+            pass/fail feedback. A recommendation engine then adapts what you practice next based on your
+            accuracy and history.
+          </p>
+          <p>
+            <strong>Scope:</strong> this currently covers static ASL alphabet handshapes (A&ndash;Z, plus
+            del and space). Motion-based signs &mdash; like the letters J and Z, waving gestures, or full
+            phrases &mdash; aren&rsquo;t supported yet; that&rsquo;s a future direction.
+          </p>
+        </Modal>
+      )}
     </header>
   );
 }
