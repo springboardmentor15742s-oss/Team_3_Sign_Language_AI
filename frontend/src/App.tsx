@@ -4,7 +4,6 @@ import { AuthProvider } from './auth/AuthContext';
 import { ProtectedRoute } from './auth/ProtectedRoute';
 import { ADMIN_ROLES, INSTRUCTOR_ROLES } from './auth/roles';
 import { Login } from './pages/Login';
-import { Register } from './pages/Register';
 import { Dashboard } from './pages/Dashboard';
 import { Practice } from './pages/Practice';
 import { Instructor } from './pages/Instructor';
@@ -16,7 +15,7 @@ function App() {
       <BrowserRouter>
         <Routes>
           <Route path="/login" element={<Login />} />
-          <Route path="/register" element={<Register />} />
+          <Route path="/register" element={<Login />} />
           <Route
             path="/dashboard"
             element={
