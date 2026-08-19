@@ -307,7 +307,7 @@ export function Practice() {
             <p className="camera-state__text">
               Practice sessions use your camera to check your hand shape against the target letter.
             </p>
-            <button className="camera-state__action" onClick={requestCamera}>
+            <button className="btn" onClick={requestCamera}>
               Turn on camera
             </button>
           </div>
@@ -327,7 +327,7 @@ export function Practice() {
             <p className="camera-state__hint">
               Click the camera icon in your browser's address bar, allow access, then try again.
             </p>
-            <button className="camera-state__action" onClick={requestCamera}>
+            <button className="btn" onClick={requestCamera}>
               Try again
             </button>
           </div>
@@ -337,7 +337,7 @@ export function Practice() {
           <div className="camera-state camera-state--warn">
             <p className="camera-state__text">No camera was found on this device.</p>
             <p className="camera-state__hint">Connect a webcam and try again.</p>
-            <button className="camera-state__action" onClick={requestCamera}>
+            <button className="btn" onClick={requestCamera}>
               Try again
             </button>
           </div>
@@ -347,7 +347,7 @@ export function Practice() {
           <div className="camera-state camera-state--warn">
             <p className="camera-state__text">Something went wrong starting the camera.</p>
             {errorDetail && <p className="camera-state__hint">{errorDetail}</p>}
-            <button className="camera-state__action" onClick={requestCamera}>
+            <button className="btn" onClick={requestCamera}>
               Try again
             </button>
           </div>
@@ -387,7 +387,7 @@ export function Practice() {
               )}
 
               <button
-                className="camera-state__action"
+                className="btn"
                 onClick={triggerCapture}
                 disabled={submitting || countdown !== null}
               >
@@ -449,10 +449,10 @@ export function Practice() {
                 )}
 
               <div className="result__actions">
-                <button className="camera-state__action camera-state__action--ghost" onClick={handleTryAgain}>
+                <button className="btn btn--ghost" onClick={handleTryAgain}>
                   Try again
                 </button>
-                <button className="camera-state__action" onClick={handleNextLetter}>
+                <button className="btn" onClick={handleNextLetter}>
                   Next letter
                 </button>
               </div>

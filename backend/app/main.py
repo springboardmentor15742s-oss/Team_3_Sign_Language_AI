@@ -15,6 +15,10 @@ app.add_middleware(
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
+    # Content-Disposition isn't a CORS "simple" response header — without
+    # exposing it explicitly, frontend JS can't read the PDF report's
+    # server-generated filename from the response.
+    expose_headers=["Content-Disposition"],
 )
 
 app.include_router(auth.router)
@@ -28,6 +32,8 @@ from app.routers import instructor
 app.include_router(instructor.router)
 from app.routers import admin
 app.include_router(admin.router)
+from app.routers import reports
+app.include_router(reports.router)
 
 @app.get("/")
 def root():

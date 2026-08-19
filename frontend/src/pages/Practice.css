@@ -36,39 +36,6 @@
   color: var(--color-text-dim);
 }
 
-.camera-state__action {
-  background: var(--color-accent);
-  border: none;
-  color: var(--color-bg);
-  font-family: var(--font-heading);
-  font-weight: 600;
-  font-size: 0.9rem;
-  padding: var(--space-3) var(--space-5);
-  border-radius: var(--radius-sm);
-  cursor: pointer;
-  transition: opacity 150ms ease;
-}
-
-.camera-state__action:hover {
-  opacity: 0.85;
-}
-
-.camera-state__action:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
-
-.camera-state__action--ghost {
-  background: transparent;
-  border: 1px solid var(--color-border);
-  color: var(--color-text);
-}
-
-.camera-state__action--ghost:hover {
-  opacity: 1;
-  border-color: var(--color-accent-dim);
-}
-
 .camera-stage {
   display: flex;
   flex-direction: column;

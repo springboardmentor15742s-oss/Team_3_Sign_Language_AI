@@ -16,6 +16,8 @@ export function Dashboard() {
   const [confusionPairs, setConfusionPairs] = useState<ConfusionPair[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
+  const [downloadingReport, setDownloadingReport] = useState(false);
+  const [downloadError, setDownloadError] = useState<string | null>(null);
 
   const loadDashboardData = useCallback(async () => {
     if (!user) return;
@@ -43,6 +45,32 @@ export function Dashboard() {
   useEffect(() => {
     loadDashboardData();
   }, [loadDashboardData]);
+
+  const handleDownloadReport = useCallback(async () => {
+    if (!user) return;
+    setDownloadingReport(true);
+    setDownloadError(null);
+    try {
+      const response = await client.get(`/api/reports/learner/${user.id}/pdf`, { responseType: 'blob' });
+
+      const disposition = response.headers['content-disposition'] as string | undefined;
+      const filename = disposition?.match(/filename="?([^"]+)"?/)?.[1] ?? 'progress-report.pdf';
+
+      const url = window.URL.createObjectURL(new Blob([response.data], { type: 'application/pdf' }));
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = filename;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+    } catch (err) {
+      console.error('Failed to download report:', err);
+      setDownloadError('Could not generate the report. Please try again.');
+    } finally {
+      setDownloadingReport(false);
+    }
+  }, [user]);
 
   if (loading && !analytics) {
     return (
@@ -76,6 +104,13 @@ export function Dashboard() {
   return (
     <div className="page dashboard">
       <Topbar title="Learner Dashboard" />
+
+      <div className="dashboard__actions">
+        <button className="btn btn--ghost" onClick={handleDownloadReport} disabled={downloadingReport}>
+          {downloadingReport ? 'Generating report…' : 'Download progress report (PDF)'}
+        </button>
+        {downloadError && <p className="status-message status-message--error">{downloadError}</p>}
+      </div>
 
       <StatsRow>
         <StatTile
