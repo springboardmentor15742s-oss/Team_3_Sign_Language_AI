@@ -1,9 +1,10 @@
-from typing import List
+from typing import List, Literal
 
 from pydantic import BaseModel
 
 class RecommendationItem(BaseModel):
-    letter: str
+    topic: str
+    topic_type: Literal["letter", "motion_sign"]
     reason: str
 
 class RecommendationsResponse(BaseModel):
