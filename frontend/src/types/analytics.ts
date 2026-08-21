@@ -43,15 +43,64 @@ export interface LearnerAnalytics {
 }
 
 // Mirrors backend/app/schemas/recommendation.py
+//
+// topic/topic_type cover every practicable thing on the platform, not just
+// letters — a recommendation can point at a static-alphabet letter or a
+// motion sign (Wave/Clap), and topic_type is what a consumer uses to route
+// to the right practice page (/practice?letter=X vs /motion-signs?sign=X).
+
+export type TopicType = 'letter' | 'motion_sign';
 
 export interface RecommendationItem {
-  letter: string;
+  topic: string;
+  topic_type: TopicType;
   reason: string;
 }
 
 export interface Recommendations {
   learner_id: string;
   recommendations: RecommendationItem[];
+}
+
+export type LearningLevel = 'beginner' | 'intermediate' | 'advanced';
+export type ActivityType = 'lesson' | 'exercise' | 'quiz' | 'practice' | 'revision' | 'challenge';
+
+export interface AdaptiveActivity {
+  type: ActivityType;
+  difficulty: LearningLevel;
+  topic: string;
+  instruction: string;
+}
+
+export interface AdaptiveRecommendation {
+  topic: string;
+  topic_type: TopicType;
+  priority: number;
+  reason: string;
+  activities: AdaptiveActivity[];
+}
+
+export interface TopicProgress {
+  topic: string;
+  topic_type: TopicType;
+  accuracy_percent: number | null;
+  scored_attempts: number;
+  trend: string;
+}
+
+export interface AdaptiveLearningPlan {
+  learner_id: string;
+  learning_level: LearningLevel;
+  profile_summary: string;
+  overall_accuracy_percent: number | null;
+  activity_days: number;
+  time_spent_minutes: number;
+  completed_topics: string[];
+  strong_topics: TopicProgress[];
+  weak_topics: TopicProgress[];
+  needs_more_practice: TopicProgress[];
+  recommendations: AdaptiveRecommendation[];
+  next_assessment: string;
 }
 
 // Mirrors backend/app/schemas/confusion.py
