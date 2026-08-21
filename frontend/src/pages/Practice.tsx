@@ -4,6 +4,7 @@ import { useSearchParams } from 'react-router-dom';
 import client from '../api/client';
 import { useAuth } from '../auth/AuthContext';
 import { Topbar } from '../components/Topbar';
+import { HandLandmarkOverlay } from '../components/HandLandmarkOverlay';
 import { LearnerAnalytics, Recommendations, RecommendationItem } from '../types/analytics';
 import { PracticeFeedback } from '../types/practice';
 import './Practice.css';
@@ -23,7 +24,8 @@ const COUNTDOWN_TICK_MS = 1000;
 const EXPLICIT_REASON = 'Chosen from your dashboard';
 
 const FALLBACK_RECOMMENDATION: RecommendationItem = {
-  letter: 'A',
+  topic: 'A',
+  topic_type: 'letter',
   reason: 'Could not load a recommendation — starting from A.',
 };
 
@@ -92,6 +94,20 @@ export function Practice() {
   const [countdown, setCountdown] = useState<number | null>(null);
   const [beforeAccuracy, setBeforeAccuracy] = useState<AccuracySnapshot | null>(null);
   const [afterAccuracy, setAfterAccuracy] = useState<AccuracySnapshot | null>(null);
+  const [capturedImageUrl, setCapturedImageUrl] = useState<string | null>(null);
+  // Display-only — never read by captureFrame, which always draws from the
+  // video element's intrinsic pixels, not its rendered/CSS-transformed box.
+  const [zoomed, setZoomed] = useState(false);
+  const practiceStartedAt = useRef<number>(Date.now());
+
+  // Revokes the previous object URL whenever it's replaced, and the final
+  // one on unmount — capturedImageUrl is only ever used for the landmark
+  // overlay below, never persisted past the component's lifetime.
+  useEffect(() => {
+    return () => {
+      if (capturedImageUrl) URL.revokeObjectURL(capturedImageUrl);
+    };
+  }, [capturedImageUrl]);
 
   const fetchLetterAccuracy = useCallback(
     async (letter: string): Promise<number | null> => {
@@ -110,7 +126,7 @@ export function Practice() {
   const fetchRecommendation = useCallback(async () => {
     if (!user) return;
     try {
-      const response = await client.get<Recommendations>(`/api/learner/${user.id}/recommendations`);
+      const response = await client.get<Recommendations>(`/api/learner/${user.id}/recommendations?topic_type=letter`);
       setRecommendation(response.data.recommendations[0] ?? FALLBACK_RECOMMENDATION);
       setRecommendationError(null);
     } catch (err) {
@@ -130,7 +146,7 @@ export function Practice() {
   // -driven pick for whatever comes next.
   useEffect(() => {
     if (explicitLetter) {
-      setRecommendation({ letter: explicitLetter, reason: EXPLICIT_REASON });
+      setRecommendation({ topic: explicitLetter, topic_type: 'letter', reason: EXPLICIT_REASON });
       return;
     }
     fetchRecommendation();
@@ -142,7 +158,7 @@ export function Practice() {
   // this attempt is logged, without a second round trip at display time.
   useEffect(() => {
     if (result || !recommendation) return;
-    const letter = recommendation.letter;
+    const letter = recommendation.topic;
     let cancelled = false;
     fetchLetterAccuracy(letter).then((accuracy) => {
       if (!cancelled) setBeforeAccuracy({ letter, accuracy });
@@ -195,9 +211,11 @@ export function Practice() {
     setCaptureError(null);
     try {
       const blob = await captureFrame(videoRef.current);
+      setCapturedImageUrl(URL.createObjectURL(blob));
 
       const formData = new FormData();
-      formData.append('target_letter', recommendation.letter);
+      formData.append('target_letter', recommendation.topic);
+      formData.append('practice_seconds', String(Math.round((Date.now() - practiceStartedAt.current) / 1000)));
       formData.append('image', blob, 'capture.jpg');
 
       const response = await client.post<PracticeFeedback>('/api/practice/feedback', formData);
@@ -208,6 +226,7 @@ export function Practice() {
       // letter's accuracy — can't have changed; only refetch when an
       // attempt actually landed in the DB.
       if (response.data.status !== 'no_attempt_detected') {
+        practiceStartedAt.current = Date.now();
         fetchRecommendation();
         const capturedLetter = response.data.target_letter;
         fetchLetterAccuracy(capturedLetter).then((accuracy) => {
@@ -357,7 +376,7 @@ export function Practice() {
           <div className="camera-video-wrap">
             <video
               ref={videoRef}
-              className={`camera-video${cameraState === 'active' ? ' camera-video--visible' : ''}`}
+              className={`camera-video${cameraState === 'active' ? ' camera-video--visible' : ''}${zoomed ? ' camera-video--zoomed' : ''}`}
               autoPlay
               playsInline
               muted
@@ -367,7 +386,19 @@ export function Practice() {
                 {countdown}
               </div>
             )}
+            {cameraState === 'active' && !result && countdown === null && (
+              <div className="live-indicator">
+                <span className="live-indicator__dot" />
+                LIVE
+              </div>
+            )}
           </div>
+
+          {cameraState === 'active' && (
+            <button type="button" className="btn btn--ghost" onClick={() => setZoomed((current) => !current)}>
+              {zoomed ? 'Normal view' : 'Zoom to hand'}
+            </button>
+          )}
 
           {cameraState === 'active' && !result && !recommendation && (
             <div className="capture-controls">
@@ -378,7 +409,7 @@ export function Practice() {
           {cameraState === 'active' && !result && recommendation && (
             <div className="capture-controls">
               <span className="capture-controls__target">
-                Sign the letter <strong>{recommendation.letter}</strong>
+                Sign the letter <strong>{recommendation.topic}</strong>
               </span>
               <span className="capture-controls__reason">{recommendation.reason}</span>
 
@@ -436,6 +467,17 @@ export function Practice() {
                   <p className="result__feedback">{result.feedback}</p>
                 </>
               )}
+
+              {(result.status === 'pass' || result.status === 'fail') &&
+                capturedImageUrl &&
+                result.landmarks &&
+                result.landmarks.length === 21 && (
+                  <HandLandmarkOverlay
+                    imageUrl={capturedImageUrl}
+                    landmarks={result.landmarks}
+                    variant={result.status === 'pass' ? 'pass' : 'fail'}
+                  />
+                )}
 
               {(result.status === 'pass' || result.status === 'fail') &&
                 beforeAccuracy?.letter === result.target_letter &&
