@@ -36,13 +36,17 @@ def _build_summary(analytics: dict) -> dict:
 
 
 def _build_practice_session(recommendations: list[dict]) -> dict:
+    # recommendations here is always topic_type="letter"-filtered (see
+    # generate_learning_plan below) — this practice session's schema is
+    # letter-specific (PracticeSessionLetter, attempts_per_letter), so a
+    # motion-sign topic has no "letter" to show here.
     return {
         "attempts_per_letter": ATTEMPTS_PER_LETTER,
         "estimated_total_attempts": len(recommendations) * ATTEMPTS_PER_LETTER,
         "letters": [
             {
                 "order": i + 1,
-                "letter": rec["letter"],
+                "letter": rec["topic"],
                 "reason": rec["reason"],
                 "target_attempts": ATTEMPTS_PER_LETTER,
             }
@@ -96,9 +100,13 @@ def generate_learning_plan(db: Session, learner_id: str) -> dict:
     Builds a personalized practice plan: a summary of current standing,
     a sequenced practice session pulled from the recommendation queue,
     and an honest, data-grounded motivational note.
+
+    Filtered to topic_type="letter" — this plan's practice_session schema
+    is letter-specific (PracticeSessionLetter), so a mixed queue including
+    motion signs would have nowhere valid to put a "Wave" recommendation.
     """
     analytics = get_learner_analytics(db, learner_id)
-    recommendations = get_recommendations(db, learner_id)["recommendations"]
+    recommendations = get_recommendations(db, learner_id, topic_type="letter")["recommendations"]
 
     return {
         "learner_id": learner_id,
