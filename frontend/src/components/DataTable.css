@@ -25,6 +25,11 @@
   white-space: nowrap;
 }
 
+.data-table td:first-child {
+  border-left: 2px solid transparent;
+  transition: border-color 150ms ease;
+}
+
 .data-table th {
   font-size: 0.75rem;
   text-transform: uppercase;
@@ -37,8 +42,16 @@
   border-bottom: none;
 }
 
+.data-table tbody tr {
+  transition: background-color 150ms ease;
+}
+
 .data-table tbody tr:hover {
   background: var(--color-surface-raised);
+}
+
+.data-table tbody tr:hover td:first-child {
+  border-left-color: var(--color-accent);
 }
 
 .data-table__numeric {

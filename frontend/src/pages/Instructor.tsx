@@ -24,6 +24,12 @@ function sortByAccuracyAscending(learners: LearnerRosterEntry[]): LearnerRosterE
 export function Instructor() {
   const [learners, setLearners] = useState<LearnerRosterEntry[] | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
+  // Per-row state, keyed by learner_id — several instructors could in
+  // principle click different rows in quick succession, so a single
+  // shared boolean/error (like Dashboard's own report button uses for
+  // its one learner) isn't enough here.
+  const [downloadingIds, setDownloadingIds] = useState<Set<string>>(new Set());
+  const [downloadErrors, setDownloadErrors] = useState<Record<string, string>>({});
 
   const loadRoster = useCallback(async () => {
     setLoadError(null);
@@ -39,6 +45,43 @@ export function Instructor() {
   useEffect(() => {
     loadRoster();
   }, [loadRoster]);
+
+  const handleDownloadReport = useCallback(async (learnerId: string) => {
+    setDownloadingIds((current) => new Set(current).add(learnerId));
+    setDownloadErrors((current) => {
+      const next = { ...current };
+      delete next[learnerId];
+      return next;
+    });
+    try {
+      // Same /api/reports/learner/{id}/pdf endpoint the learner's own
+      // Dashboard uses — require_self_or_staff already allows
+      // instructor/admin to pull any learner's report, so this is a
+      // frontend-only addition, no backend change needed.
+      const response = await client.get(`/api/reports/learner/${learnerId}/pdf`, { responseType: 'blob' });
+
+      const disposition = response.headers['content-disposition'] as string | undefined;
+      const filename = disposition?.match(/filename="?([^"]+)"?/)?.[1] ?? 'progress-report.pdf';
+
+      const url = window.URL.createObjectURL(new Blob([response.data], { type: 'application/pdf' }));
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = filename;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+    } catch (err) {
+      console.error('Failed to download report for learner', learnerId, err);
+      setDownloadErrors((current) => ({ ...current, [learnerId]: 'Could not generate this report.' }));
+    } finally {
+      setDownloadingIds((current) => {
+        const next = new Set(current);
+        next.delete(learnerId);
+        return next;
+      });
+    }
+  }, []);
 
   return (
     <div className="page instructor">
@@ -73,6 +116,7 @@ export function Instructor() {
                   <th>Accuracy</th>
                   <th>Letters scored</th>
                   <th>Weak areas</th>
+                  <th>Report</th>
                 </tr>
               </thead>
               <tbody>
@@ -80,6 +124,8 @@ export function Instructor() {
                   const isWeakAccuracy =
                     learner.overall_accuracy_percent !== null &&
                     learner.overall_accuracy_percent < WEAK_ACCURACY_THRESHOLD;
+                  const isDownloading = downloadingIds.has(learner.learner_id);
+                  const downloadError = downloadErrors[learner.learner_id];
 
                   return (
                     <tr key={learner.learner_id}>
@@ -100,6 +146,21 @@ export function Instructor() {
                         className={`data-table__numeric${learner.weak_area_count > 0 ? ' data-table__numeric--weak' : ''}`}
                       >
                         {learner.weak_area_count}
+                      </td>
+                      <td className="data-table__numeric">
+                        <button
+                          type="button"
+                          className="btn btn--ghost roster-section__report-btn"
+                          onClick={() => handleDownloadReport(learner.learner_id)}
+                          disabled={isDownloading}
+                        >
+                          {isDownloading ? 'Generating…' : 'PDF'}
+                        </button>
+                        {downloadError && (
+                          <p className="status-message status-message--error roster-section__report-error">
+                            {downloadError}
+                          </p>
+                        )}
                       </td>
                     </tr>
                   );
