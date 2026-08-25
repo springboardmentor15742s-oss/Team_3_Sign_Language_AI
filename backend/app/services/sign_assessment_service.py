@@ -14,6 +14,7 @@ def assess_sign(gesture_result: dict | None, target_letter: str) -> dict:
             "confidence": None,
             "target_letter": target_letter,
             "predicted_letter": None,
+            "landmarks": None,
         }
 
     predicted_letter = gesture_result["letter"]
@@ -26,4 +27,5 @@ def assess_sign(gesture_result: dict | None, target_letter: str) -> dict:
         "confidence": confidence,
         "target_letter": target_letter,
         "predicted_letter": predicted_letter,
+        "landmarks": gesture_result.get("landmarks"),
     }

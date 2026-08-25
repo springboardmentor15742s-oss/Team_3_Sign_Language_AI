@@ -16,12 +16,16 @@
   justify-content: center;
   text-decoration: none;
   color: inherit;
-  transition: border-color 150ms ease, transform 150ms ease;
+  transition: border-color 150ms ease, transform 150ms ease, box-shadow 150ms ease;
+  animation: rise-in var(--duration-base) var(--ease-out) both;
+  animation-delay: calc(var(--cell-i, 0) * 15ms);
 }
 
 .board-cell:hover {
   border-color: var(--color-accent-dim);
-  transform: translateY(-1px);
+  transform: translateY(-2px) scale(1.03);
+  box-shadow: var(--shadow-glow-sm);
+  z-index: 1;
 }
 
 .board-cell:focus-visible {
@@ -40,14 +44,18 @@
   left: 0;
   right: 0;
   bottom: 0;
-  background: var(--color-accent);
-  opacity: 0.28;
-  transition: height 300ms ease;
+  background: linear-gradient(180deg, var(--color-accent) 0%, color-mix(in srgb, var(--color-accent) 55%, transparent) 100%);
+  opacity: 0.32;
+  transition: height 600ms var(--ease-out), opacity 150ms ease;
+}
+
+.board-cell:hover .board-cell__fill {
+  opacity: 0.5;
 }
 
 .board-cell--weak .board-cell__fill {
-  background: var(--color-warn);
-  opacity: 0.4;
+  background: linear-gradient(180deg, var(--color-warn) 0%, color-mix(in srgb, var(--color-warn) 55%, transparent) 100%);
+  opacity: 0.42;
 }
 
 .board-cell__letter {

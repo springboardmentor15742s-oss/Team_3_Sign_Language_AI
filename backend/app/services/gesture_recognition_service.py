@@ -34,7 +34,7 @@ def recognize_gesture(image: np.ndarray) -> dict | None:
 
     Returns None if no hand is detected in the frame — callers should
     treat that as an upstream "no hand present" case, not a prediction.
-    Otherwise returns {"letter": str, "confidence": float}.
+    Otherwise returns {"letter": str, "confidence": float, "landmarks": list[dict]}.
     """
     hands = detect_hand_landmarks(image)
     if not hands:
@@ -51,6 +51,9 @@ def recognize_gesture(image: np.ndarray) -> dict | None:
     return {
         "letter": model.classes_[best_idx],
         "confidence": float(probabilities[best_idx]),
+        # Raw (pre-normalization) landmarks, kept only for display — the
+        # classifier above already ran on the normalized features.
+        "landmarks": best_hand["landmarks"],
     }
 
 

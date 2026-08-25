@@ -2,6 +2,12 @@
 
 export type AssessmentStatus = 'pass' | 'fail' | 'no_attempt_detected';
 
+export interface HandLandmarkPoint {
+  x: number;
+  y: number;
+  z: number;
+}
+
 export interface PracticeFeedback {
   // Null when status is no_attempt_detected — that outcome isn't logged.
   attempt_id: string | null;
@@ -12,4 +18,6 @@ export interface PracticeFeedback {
   predicted_letter: string | null;
   feedback: string;
   created_at: string | null;
+  // Null whenever no hand was detected, same as predicted_letter.
+  landmarks: HandLandmarkPoint[] | null;
 }

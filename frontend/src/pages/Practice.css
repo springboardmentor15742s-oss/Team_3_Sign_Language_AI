@@ -130,8 +130,30 @@
   }
 }
 
+/* One outward glow pulse when a result lands — a single event, not a
+   loop — so pass/fail feedback feels immediate without being noisy. */
+.result--pass {
+  animation: result-appear 180ms ease-out, result-flash-pass 900ms ease-out;
+}
+
+.result--fail {
+  animation: result-appear 180ms ease-out, result-flash-fail 900ms ease-out;
+}
+
+@keyframes result-flash-pass {
+  0% { box-shadow: 0 0 0 0 var(--color-accent-glow-strong); }
+  100% { box-shadow: 0 0 0 22px transparent; }
+}
+
+@keyframes result-flash-fail {
+  0% { box-shadow: 0 0 0 0 var(--color-warn-glow); }
+  100% { box-shadow: 0 0 0 22px transparent; }
+}
+
 @media (prefers-reduced-motion: reduce) {
-  .result {
+  .result,
+  .result--pass,
+  .result--fail {
     animation: none;
   }
 }
@@ -214,6 +236,49 @@
   text-align: right;
 }
 
+.landmark-overlay {
+  position: relative;
+  width: 100%;
+  max-width: 280px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--color-border);
+  overflow: hidden;
+}
+
+.landmark-overlay__image {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+.landmark-overlay__svg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+
+.landmark-overlay__line {
+  stroke-width: 0.008;
+  vector-effect: non-scaling-stroke;
+}
+
+.landmark-overlay__line--pass {
+  stroke: var(--color-accent);
+}
+
+.landmark-overlay__line--fail {
+  stroke: var(--color-warn);
+}
+
+.landmark-overlay__dot--pass {
+  fill: var(--color-accent);
+}
+
+.landmark-overlay__dot--fail {
+  fill: var(--color-warn);
+}
+
 .result__progress {
   margin: 0;
   font-family: var(--font-mono);
@@ -235,6 +300,8 @@
   position: relative;
   width: 100%;
   max-width: 640px;
+  overflow: hidden;
+  border-radius: var(--radius-md);
 }
 
 .camera-video {
@@ -252,6 +319,13 @@
 
 .camera-video--visible {
   display: block;
+}
+
+/* Purely a display-time crop — the video element's intrinsic pixel data
+   (what captureFrame reads) is untouched by this transform. */
+.camera-video--zoomed {
+  transform: scaleX(-1) scale(1.7);
+  transform-origin: center center;
 }
 
 /* Corner badge, not a centered overlay — the countdown needs to be
@@ -274,6 +348,48 @@
   font-weight: 600;
   color: var(--color-accent);
   z-index: 3;
+  /* Only runs while a 3-2-1 countdown is actually in progress (a few
+     seconds), not an idle loop. */
+  animation: countdown-pulse 1s ease-in-out infinite;
+}
+
+@keyframes countdown-pulse {
+  0%, 100% { box-shadow: 0 0 0 0 var(--color-accent-glow-strong); }
+  50% { box-shadow: 0 0 0 8px transparent; }
+}
+
+/* "System is watching" indicator — only present while the camera is on
+   and actively looking for a hand (not while showing a result), so the
+   pulse is tied to real state, not decoration. */
+.live-indicator {
+  position: absolute;
+  top: var(--space-3);
+  left: var(--space-3);
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--color-bg) 55%, transparent);
+  backdrop-filter: blur(4px);
+  font-family: var(--font-mono);
+  font-size: 0.68rem;
+  letter-spacing: 0.08em;
+  color: var(--color-accent);
+  z-index: 3;
+}
+
+.live-indicator__dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--color-accent);
+  animation: live-pulse 1.4s ease-in-out infinite;
+}
+
+@keyframes live-pulse {
+  0%, 100% { opacity: 1; box-shadow: 0 0 0 0 var(--color-accent-glow-strong); }
+  50% { opacity: 0.6; box-shadow: 0 0 0 4px transparent; }
 }
 
 @media (max-width: 860px) {
