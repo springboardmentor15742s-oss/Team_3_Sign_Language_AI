@@ -156,3 +156,79 @@ export interface LearnerFeedback {
   performance: FeedbackPerformance;
   areas_for_improvement: FeedbackImprovementArea[];
 }
+
+// Mirrors backend/app/schemas/learning_analytics_workflow.py — Task 2, the
+// learning analytics workflow: completion rate, activity frequency
+// patterns, commonly-missed/avoided topics, and a current-vs-previous
+// performance comparison.
+
+export interface CourseCompletion {
+  course_id: string;
+  title: string;
+  attempted_count: number | null;
+  total_count: number | null;
+  completion_percent: number | null;
+}
+
+export interface CompletionRate {
+  overall_percent: number | null;
+  attempted_count: number;
+  total_count: number;
+  by_course: CourseCompletion[];
+}
+
+export interface FrequencyPatterns {
+  days_active_total: number;
+  days_active_last_7: number;
+  days_active_last_30: number;
+  avg_attempts_per_active_day: number | null;
+  last_active_date: string | null;
+  days_since_last_active: number | null;
+  most_active_weekday: string | null;
+}
+
+export interface CommonlyMissedItem {
+  topic: string;
+  topic_type: TopicType;
+  incorrect_count: number;
+  accuracy_percent: number | null;
+}
+
+export interface AvoidedTopicItem {
+  topic: string;
+  topic_type: TopicType;
+}
+
+export interface PerformanceWindow {
+  attempts: number;
+  scored_attempts: number;
+  accuracy_percent: number | null;
+}
+
+export interface PerformanceComparison {
+  available: boolean;
+  reason: string | null;
+  current_period: PerformanceWindow;
+  previous_period: PerformanceWindow;
+  accuracy_delta_percent: number | null;
+  trend: 'improving' | 'steady' | 'declining' | null;
+}
+
+export interface LearningAnalyticsWorkflow {
+  learner_id: string;
+  collected_data_summary: {
+    total_letter_attempts: number;
+    total_motion_attempts: number;
+    total_scored_attempts: number;
+  };
+  performance_metrics: {
+    overall_accuracy_percent: number | null;
+    letter_accuracy_percent: number | null;
+    motion_sign_accuracy_percent: number | null;
+  };
+  completion_rate: CompletionRate;
+  frequency_patterns: FrequencyPatterns;
+  commonly_missed: CommonlyMissedItem[];
+  avoided_topics: AvoidedTopicItem[];
+  performance_comparison: PerformanceComparison;
+}

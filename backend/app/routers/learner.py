@@ -10,6 +10,7 @@ from app.schemas.adaptive_learning import AdaptiveLearningPlanResponse
 from app.schemas.confusion import ConfusionPairsResponse
 from app.schemas.courses import CourseCatalogResponse
 from app.schemas.feedback import LearnerFeedbackResponse
+from app.schemas.learning_analytics_workflow import LearningAnalyticsWorkflowResponse
 from app.schemas.learning_plan import LearningPlanResponse
 from app.schemas.progress import LearnerProgressResponse
 from app.schemas.recommendation import RecommendationsResponse
@@ -18,6 +19,7 @@ from app.services.auth_dependency import require_self_or_staff
 from app.services.confusion_service import get_confusion_pairs
 from app.services.course_catalog_service import get_course_catalog
 from app.services.learning_analytics_service import get_learner_analytics
+from app.services.learning_analytics_workflow_service import get_learning_analytics_workflow
 from app.services.adaptive_learning_service import get_adaptive_learning_plan
 from app.services.learning_plan_service import generate_learning_plan
 from app.services.progress_service import get_learner_progress
@@ -97,3 +99,12 @@ def get_learner_feedback_endpoint(
 ):
     """Automated, skill-tiered feedback covering errors, performance, and areas for improvement — rebuilt fresh every call."""
     return get_learner_feedback(db, learner_id)
+
+@router.get("/{learner_id}/analytics-workflow", response_model=LearningAnalyticsWorkflowResponse)
+def get_learner_analytics_workflow_endpoint(
+    learner_id: str,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_self_or_staff),
+):
+    """Completion rate, activity-frequency patterns, commonly-missed/avoided topics, and a current-vs-previous performance comparison."""
+    return get_learning_analytics_workflow(db, learner_id)
