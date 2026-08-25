@@ -4,10 +4,16 @@ import { useAuth } from '../auth/AuthContext';
 import { AlphabetBoard } from '../components/AlphabetBoard';
 import { PracticeNextPanel } from '../components/PracticeNextPanel';
 import { ConfusionPanel } from '../components/ConfusionPanel';
+import { AnimatedNumber } from '../components/AnimatedNumber';
+import { AchievementsPanel } from '../components/AchievementsPanel';
+import { ActivityTimelinePanel } from '../components/ActivityTimelinePanel';
+import { ForecastPanel } from '../components/ForecastPanel';
+import { AdaptiveLearningPanel } from '../components/AdaptiveLearningPanel';
 import { FeedbackPanel } from '../components/FeedbackPanel';
 import { StatsRow, StatTile } from '../components/StatsRow';
 import { Topbar } from '../components/Topbar';
-import { ConfusionPair, LearnerAnalytics, LearnerFeedback, RecommendationItem } from '../types/analytics';
+import { AdaptiveLearningPlan, ConfusionPair, LearnerAnalytics, LearnerFeedback, RecommendationItem } from '../types/analytics';
+import { LearnerProgress } from '../types/progress';
 import './Dashboard.css';
 
 export function Dashboard() {
@@ -15,6 +21,8 @@ export function Dashboard() {
   const [analytics, setAnalytics] = useState<LearnerAnalytics | null>(null);
   const [recommendations, setRecommendations] = useState<RecommendationItem[]>([]);
   const [confusionPairs, setConfusionPairs] = useState<ConfusionPair[]>([]);
+  const [progress, setProgress] = useState<LearnerProgress | null>(null);
+  const [adaptivePlan, setAdaptivePlan] = useState<AdaptiveLearningPlan | null>(null);
   const [feedback, setFeedback] = useState<LearnerFeedback | null>(null);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
@@ -26,15 +34,19 @@ export function Dashboard() {
     setLoading(true);
     setLoadError(null);
     try {
-      const [analyticsRes, recommendationsRes, confusionRes, feedbackRes] = await Promise.all([
+      const [analyticsRes, recommendationsRes, confusionRes, progressRes, adaptivePlanRes, feedbackRes] = await Promise.all([
         client.get<LearnerAnalytics>(`/api/learner/${user.id}/analytics`),
         client.get<{ recommendations: RecommendationItem[] }>(`/api/learner/${user.id}/recommendations`),
         client.get<{ pairs: ConfusionPair[] }>(`/api/learner/${user.id}/confusion-pairs`),
+        client.get<LearnerProgress>(`/api/learner/${user.id}/progress`),
+        client.get<AdaptiveLearningPlan>(`/api/learner/${user.id}/adaptive-learning-plan`),
         client.get<LearnerFeedback>(`/api/learner/${user.id}/feedback`),
       ]);
       setAnalytics(analyticsRes.data);
       setRecommendations(recommendationsRes.data.recommendations);
       setConfusionPairs(confusionRes.data.pairs);
+      setProgress(progressRes.data);
+      setAdaptivePlan(adaptivePlanRes.data);
       setFeedback(feedbackRes.data);
     } catch (err) {
       console.error('Failed to load dashboard data:', err);
@@ -121,23 +133,41 @@ export function Dashboard() {
           variant="accent"
           value={
             <>
-              {analytics.overall_accuracy_percent ?? '—'}
+              {analytics.overall_accuracy_percent !== null ? (
+                <AnimatedNumber
+                  value={analytics.overall_accuracy_percent}
+                  decimals={Number.isInteger(analytics.overall_accuracy_percent) ? 0 : 1}
+                />
+              ) : (
+                '—'
+              )}
               {analytics.overall_accuracy_percent !== null && <span className="stat-tile__unit">%</span>}
             </>
           }
           label="Lifetime accuracy"
         />
-        <StatTile value={analytics.total_attempts} label="Attempts" />
+        <StatTile value={<AnimatedNumber value={analytics.total_attempts} />} label="Attempts" />
         <StatTile
           value={
             <>
-              {scoredLetterCount}
+              <AnimatedNumber value={scoredLetterCount} />
               <span className="stat-tile__unit">/{letterCount}</span>
             </>
           }
           label="Letters scored"
         />
-        <StatTile variant="warn" value={analytics.weak_areas.length} label="Weak areas" />
+        <StatTile
+          variant="warn"
+          value={<AnimatedNumber value={analytics.weak_areas.length} />}
+          label="Weak areas"
+        />
+        {progress && (
+          <StatTile
+            variant={progress.current_streak_days > 0 ? 'accent' : 'default'}
+            value={<AnimatedNumber value={progress.current_streak_days} />}
+            label="Day streak"
+          />
+        )}
       </StatsRow>
 
       <section className="board-section">
@@ -149,7 +179,19 @@ export function Dashboard() {
         <ConfusionPanel pairs={confusionPairs} />
       </section>
 
+      {adaptivePlan && <AdaptiveLearningPanel plan={adaptivePlan} />}
       {feedback && <FeedbackPanel feedback={feedback} />}
+
+      {progress && (
+        <>
+          <section className="panels-row">
+            <AchievementsPanel achievements={progress.achievements} />
+            <ActivityTimelinePanel activity={progress.recent_activity} />
+          </section>
+
+          <ForecastPanel forecast={progress.forecast} />
+        </>
+      )}
     </div>
   );
 }
