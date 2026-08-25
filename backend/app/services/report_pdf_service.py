@@ -161,12 +161,13 @@ def render_learner_report_pdf(report: LearnerReport) -> bytes:
     # Recommendations
     story.append(Paragraph("Practice next", styles["heading"]))
     if report.recommendations:
-        rec_rows = [["#", "Letter", "Reason"]]
+        rec_rows = [["#", "Topic", "Type", "Reason"]]
         for i, rec in enumerate(report.recommendations, start=1):
-            rec_rows.append([str(i), rec.letter, rec.reason])
-        rec_table = Table(rec_rows, colWidths=[0.4 * inch, 0.8 * inch, 4.2 * inch])
+            topic_label = "Motion sign" if rec.topic_type == "motion_sign" else "Letter"
+            rec_rows.append([str(i), rec.topic, topic_label, rec.reason])
+        rec_table = Table(rec_rows, colWidths=[0.4 * inch, 0.9 * inch, 1.0 * inch, 3.1 * inch])
         rec_table.setStyle(
-            TableStyle(_TABLE_HEADER_STYLE + [("ALIGN", (0, 0), (1, -1), "CENTER")])
+            TableStyle(_TABLE_HEADER_STYLE + [("ALIGN", (0, 0), (2, -1), "CENTER")])
         )
         story.append(rec_table)
     else:
@@ -185,5 +186,108 @@ def render_learner_report_pdf(report: LearnerReport) -> bytes:
         )
         story.append(confusion_table)
 
+    _append_analytics_workflow_sections(story, styles, report.analytics_workflow)
+
     doc.build(story)
     return buffer.getvalue()
+
+
+def _append_analytics_workflow_sections(story, styles, workflow) -> None:
+    """
+    Task 2 — learning analytics workflow: completion rate, activity
+    frequency patterns, commonly-missed/avoided topics, and a
+    current-vs-previous performance comparison. Appended as its own
+    section of flowables onto the same report `story` rather than a
+    separate document, so there is exactly one downloadable report
+    containing everything the brief asked for.
+    """
+    story.append(Spacer(1, 0.3 * inch))
+    story.append(Paragraph("Learning analytics workflow", styles["heading"]))
+
+    # Completion rate by course
+    story.append(Paragraph("Completion rate", styles["body"]))
+    story.append(Spacer(1, 0.08 * inch))
+    completion_rows = [["Course", "Attempted", "Total", "Completion"]]
+    for course in workflow.completion_rate.by_course:
+        completion_rows.append([
+            course.title,
+            str(course.attempted_count) if course.attempted_count is not None else EM_DASH,
+            str(course.total_count) if course.total_count is not None else EM_DASH,
+            _format_percent(course.completion_percent),
+        ])
+    completion_table = Table(completion_rows, colWidths=[2.2 * inch, 1.2 * inch, 1.0 * inch, 1.4 * inch])
+    completion_table.setStyle(
+        TableStyle(_TABLE_HEADER_STYLE + [("ALIGN", (1, 0), (-1, -1), "CENTER")])
+    )
+    story.append(completion_table)
+    story.append(Spacer(1, 0.25 * inch))
+
+    # Frequency & activity patterns
+    story.append(Paragraph("Activity frequency", styles["body"]))
+    story.append(Spacer(1, 0.08 * inch))
+    freq = workflow.frequency_patterns
+    freq_rows = [
+        ["Active days (total)", str(freq.days_active_total)],
+        ["Active days (last 7)", str(freq.days_active_last_7)],
+        ["Active days (last 30)", str(freq.days_active_last_30)],
+        ["Avg. attempts / active day", str(freq.avg_attempts_per_active_day) if freq.avg_attempts_per_active_day is not None else EM_DASH],
+        ["Last active", freq.last_active_date or "Never"],
+        ["Most active day", freq.most_active_weekday or EM_DASH],
+    ]
+    freq_table = Table(freq_rows, colWidths=[2.4 * inch, 2.4 * inch])
+    freq_table.setStyle(
+        TableStyle([
+            ("FONTNAME", (0, 0), (0, -1), "Helvetica-Bold"),
+            ("FONTNAME", (1, 0), (1, -1), "Helvetica"),
+            ("FONTSIZE", (0, 0), (-1, -1), 9),
+            ("GRID", (0, 0), (-1, -1), 0.5, _GRID_COLOR),
+            ("TOPPADDING", (0, 0), (-1, -1), 4),
+            ("BOTTOMPADDING", (0, 0), (-1, -1), 4),
+        ])
+    )
+    story.append(freq_table)
+    story.append(Spacer(1, 0.25 * inch))
+
+    # Commonly missed topics
+    story.append(Paragraph("Commonly missed topics", styles["body"]))
+    story.append(Spacer(1, 0.08 * inch))
+    if workflow.commonly_missed:
+        missed_rows = [["Topic", "Type", "Times missed", "Accuracy"]]
+        for item in workflow.commonly_missed:
+            topic_label = "Motion sign" if item.topic_type == "motion_sign" else "Letter"
+            missed_rows.append([item.topic, topic_label, str(item.incorrect_count), _format_percent(item.accuracy_percent)])
+        missed_table = Table(missed_rows, colWidths=[1.6 * inch, 1.4 * inch, 1.4 * inch, 1.4 * inch])
+        missed_table.setStyle(TableStyle(_TABLE_HEADER_STYLE + [("ALIGN", (1, 0), (-1, -1), "CENTER")]))
+        story.append(missed_table)
+    else:
+        story.append(Paragraph("No missed topics recorded yet.", styles["body"]))
+    story.append(Spacer(1, 0.2 * inch))
+
+    # Avoided topics
+    story.append(Paragraph("Avoided topics (never attempted)", styles["body"]))
+    story.append(Spacer(1, 0.08 * inch))
+    if workflow.avoided_topics:
+        avoided_text = ", ".join(f"{t.topic} ({'motion sign' if t.topic_type == 'motion_sign' else 'letter'})" for t in workflow.avoided_topics)
+        story.append(Paragraph(avoided_text, styles["body"]))
+    else:
+        story.append(Paragraph("Every topic has been attempted at least once.", styles["body"]))
+    story.append(Spacer(1, 0.25 * inch))
+
+    # Performance comparison: current vs previous period
+    story.append(Paragraph("Current vs. previous performance", styles["body"]))
+    story.append(Spacer(1, 0.08 * inch))
+    comparison = workflow.performance_comparison
+    if comparison.available:
+        trend_word = {"improving": "improving", "declining": "declining", "steady": "steady"}.get(comparison.trend, comparison.trend)
+        story.append(
+            Paragraph(
+                f"Current period accuracy: {_format_percent(comparison.current_period.accuracy_percent)} "
+                f"({comparison.current_period.scored_attempts} scored attempts). "
+                f"Previous period accuracy: {_format_percent(comparison.previous_period.accuracy_percent)} "
+                f"({comparison.previous_period.scored_attempts} scored attempts). "
+                f"Change: {comparison.accuracy_delta_percent:+.1f} percentage points — {trend_word}.",
+                styles["body"],
+            )
+        )
+    else:
+        story.append(Paragraph(comparison.reason or "Not enough data yet to compare current and previous performance.", styles["body"]))

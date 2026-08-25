@@ -17,6 +17,7 @@ from app.services.learning_analytics_service import (
     WEAK_AREA_MIN_SCORED_ATTEMPTS,
     get_learner_analytics,
 )
+from app.services.learning_analytics_workflow_service import get_learning_analytics_workflow
 from app.services.recommendation_service import get_recommendations
 
 
@@ -34,6 +35,7 @@ def assemble_learner_report(db: Session, learner_id: str) -> LearnerReport:
     analytics = get_learner_analytics(db, learner_id)
     recommendations = get_recommendations(db, learner_id)["recommendations"]
     confusion_pairs = get_confusion_pairs(db, learner_id)["pairs"]
+    analytics_workflow = get_learning_analytics_workflow(db, learner_id)
 
     per_letter = [
         ReportLetterStats(
@@ -73,4 +75,5 @@ def assemble_learner_report(db: Session, learner_id: str) -> LearnerReport:
         confusion_pairs=[ReportConfusionPair(**p) for p in confusion_pairs],
         weak_area_accuracy_threshold=WEAK_AREA_ACCURACY_THRESHOLD,
         weak_area_min_scored_attempts=WEAK_AREA_MIN_SCORED_ATTEMPTS,
+        analytics_workflow=analytics_workflow,
     )
