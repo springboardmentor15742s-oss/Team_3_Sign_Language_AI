@@ -9,3 +9,18 @@ backend/data/*
 !backend/data/models/
 backend/data/models/*
 !backend/data/models/gesture_classifier.pkl
+!backend/data/curriculum/
+!backend/data/curriculum/README.md
+!backend/data/curriculum/msasl_curriculum_labels.json
+# Generated manifests contain licensed source annotations; regenerate locally
+# with backend/scripts/build_msasl_curriculum.py instead of committing them.
+backend/data/curriculum/manifests/
+
+# Root-level /data — the downloaded Kaggle ASL-signs subset (900 landmark
+# parquet files + metadata) and any downloaded MS-ASL video clips. Both are
+# large binary datasets regenerable via the scripts in backend/scripts/; the
+# MS-ASL clips are additionally licensed under C-UDA 0.1 (computational/
+# research use only — see backend/data/curriculum/README.md) and must not be
+# redistributed via git.
+/data/asl-signs/
+/data/external/

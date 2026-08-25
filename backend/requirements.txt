@@ -25,3 +25,7 @@ matplotlib==3.11.1
 # Pure Python wheel (py3-none-any) — no compiled extension, so no
 # platform-specific wheel risk like mediapipe/opencv above.
 reportlab==5.0.0
+# Added for the word-level temporal sign classifier (prepare_word_dataset.py /
+# train_word_classifier.py): reads the Kaggle ASL-signs landmark parquet files.
+pandas==2.2.3
+pyarrow==18.1.0
