@@ -23,6 +23,11 @@ const NAV_LINKS_BY_ROLE: Record<string, NavLinkConfig[]> = {
   learner: [
     { to: '/dashboard', label: 'Dashboard' },
     { to: '/practice', label: 'Practice' },
+    { to: '/common-signs', label: 'Common Signs' },
+    { to: '/motion-signs', label: 'Everyday Gestures' },
+    { to: '/speed-quiz', label: 'Speed Quiz' },
+    { to: '/courses', label: 'Courses' },
+    { to: '/analytics-reports', label: 'Analytics' },
   ],
   instructor: [{ to: '/instructor', label: 'Roster' }],
   admin: [{ to: '/admin', label: 'Overview' }],
@@ -76,8 +81,27 @@ export function Topbar({ title }: TopbarProps) {
           </p>
           <p>
             <strong>Scope:</strong> this currently covers static ASL alphabet handshapes (A&ndash;Z, plus
-            del and space). Motion-based signs &mdash; like the letters J and Z, waving gestures, or full
-            phrases &mdash; aren&rsquo;t supported yet; that&rsquo;s a future direction.
+            del and space). Motion-based letters &mdash; like J and Z &mdash; and full ASL vocabulary
+            phrases aren&rsquo;t supported yet; that needs a real downloaded video-sign dataset and a
+            trained temporal model.
+          </p>
+          <p>
+            <strong>Common Signs:</strong> a separate, smaller feature under &ldquo;Common Signs&rdquo; recognizes
+            a few additional signs (I Love You, Yes, No) that are genuine static single-hand handshapes. This
+            uses rule-based hand-landmark geometry, not a trained model, and isn&rsquo;t scored or counted in
+            your practice stats.
+          </p>
+          <p>
+            <strong>Everyday Gestures:</strong> under &ldquo;Everyday Gestures&rdquo;, Wave and Clap are
+            recognized from real hand-trajectory geometry across a short video clip &mdash; this
+            platform&rsquo;s first recognizer that looks at motion, not a single frame. Also rule-based, not
+            a trained model. Unlike Common Signs, this one <em>is</em> attempt-tracked with real progress,
+            since each gesture has an unambiguous target to score against.
+          </p>
+          <p>
+            <strong>Courses:</strong> the &ldquo;Courses&rdquo; page lists what&rsquo;s actually built (alphabet
+            practice, common signs, everyday gestures) alongside categories that aren&rsquo;t built yet
+            &mdash; those are labeled plainly rather than shown with fake progress.
           </p>
         </Modal>
       )}
