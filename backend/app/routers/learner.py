@@ -9,9 +9,11 @@ from app.schemas.analytics import LearnerAnalyticsResponse
 from app.schemas.adaptive_learning import AdaptiveLearningPlanResponse
 from app.schemas.confusion import ConfusionPairsResponse
 from app.schemas.courses import CourseCatalogResponse
+from app.schemas.feedback import LearnerFeedbackResponse
 from app.schemas.learning_plan import LearningPlanResponse
 from app.schemas.progress import LearnerProgressResponse
 from app.schemas.recommendation import RecommendationsResponse
+from app.services.ai_feedback_service import get_learner_feedback
 from app.services.auth_dependency import require_self_or_staff
 from app.services.confusion_service import get_confusion_pairs
 from app.services.course_catalog_service import get_course_catalog
@@ -86,3 +88,12 @@ def get_learner_courses(
     """Minimal course catalog with real progress on the one course that has progress to show (alphabet practice)."""
     analytics = get_learner_analytics(db, learner_id)
     return CourseCatalogResponse(courses=get_course_catalog(analytics, db, learner_id))
+
+@router.get("/{learner_id}/feedback", response_model=LearnerFeedbackResponse)
+def get_learner_feedback_endpoint(
+    learner_id: str,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_self_or_staff),
+):
+    """Automated, skill-tiered feedback covering errors, performance, and areas for improvement — rebuilt fresh every call."""
+    return get_learner_feedback(db, learner_id)

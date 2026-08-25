@@ -5,6 +5,12 @@
   padding: var(--space-5);
   flex: 1;
   min-width: 0;
+  transition: border-color var(--duration-fast) ease, box-shadow var(--duration-fast) ease;
+}
+
+.panel:hover {
+  border-color: var(--color-accent-dim);
+  box-shadow: var(--shadow-glow-sm);
 }
 
 .panel__title {
@@ -119,5 +125,52 @@
 .confusion-list__count {
   font-family: var(--font-mono);
   font-size: 0.85rem;
+  color: var(--color-text-dim);
+}
+
+/* AI feedback engine (Task 1) */
+
+.feedback-panel {
+  margin-top: var(--space-4);
+}
+
+.feedback-panel__header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: var(--space-3);
+}
+
+.feedback-panel__summary {
+  margin: var(--space-2) 0 0;
+  color: var(--color-text-dim);
+  font-size: 0.9rem;
+}
+
+.feedback-panel__section {
+  margin-top: var(--space-4);
+}
+
+.feedback-panel__section-title {
+  margin: 0 0 var(--space-2);
+  font-family: var(--font-heading);
+  font-size: 0.8rem;
+  font-weight: 600;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  color: var(--color-text-faint);
+}
+
+.feedback-panel__list {
+  margin: 0;
+  padding-left: 1.2rem;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  color: var(--color-text);
+  font-size: 0.88rem;
+}
+
+.feedback-panel__activity-hint {
   color: var(--color-text-dim);
 }

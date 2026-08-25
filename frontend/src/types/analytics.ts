@@ -110,3 +110,49 @@ export interface ConfusionPair {
   predicted_letter: string;
   count: number;
 }
+
+// Mirrors backend/app/schemas/feedback.py — Task 1, the AI-based feedback
+// engine: errors, performance, and areas for improvement, tiered by the
+// learner's current skill level.
+
+export interface ActivityFeedback {
+  topic: string;
+  topic_type: TopicType;
+  status: 'pass' | 'fail' | 'no_attempt_detected';
+  learner_level: LearningLevel;
+  message: string;
+  performance: string;
+  error: string | null;
+  improvement_tip: string | null;
+}
+
+export interface FeedbackErrorItem {
+  topic: string;
+  topic_type: TopicType;
+  accuracy_percent: number | null;
+  scored_attempts: number | null;
+  detail: string;
+}
+
+export interface FeedbackPerformance {
+  learning_level: LearningLevel;
+  overall_accuracy_percent: number | null;
+  scored_attempts: number;
+  summary: string;
+}
+
+export interface FeedbackImprovementArea {
+  topic: string;
+  topic_type: TopicType;
+  accuracy_percent: number | null;
+  suggested_activities: AdaptiveActivity[];
+}
+
+export interface LearnerFeedback {
+  learner_id: string;
+  learner_level: LearningLevel;
+  generated_from_attempts: number;
+  errors: FeedbackErrorItem[];
+  performance: FeedbackPerformance;
+  areas_for_improvement: FeedbackImprovementArea[];
+}

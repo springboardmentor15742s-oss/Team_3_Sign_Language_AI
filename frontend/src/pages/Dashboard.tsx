@@ -4,9 +4,10 @@ import { useAuth } from '../auth/AuthContext';
 import { AlphabetBoard } from '../components/AlphabetBoard';
 import { PracticeNextPanel } from '../components/PracticeNextPanel';
 import { ConfusionPanel } from '../components/ConfusionPanel';
+import { FeedbackPanel } from '../components/FeedbackPanel';
 import { StatsRow, StatTile } from '../components/StatsRow';
 import { Topbar } from '../components/Topbar';
-import { ConfusionPair, LearnerAnalytics, RecommendationItem } from '../types/analytics';
+import { ConfusionPair, LearnerAnalytics, LearnerFeedback, RecommendationItem } from '../types/analytics';
 import './Dashboard.css';
 
 export function Dashboard() {
@@ -14,6 +15,7 @@ export function Dashboard() {
   const [analytics, setAnalytics] = useState<LearnerAnalytics | null>(null);
   const [recommendations, setRecommendations] = useState<RecommendationItem[]>([]);
   const [confusionPairs, setConfusionPairs] = useState<ConfusionPair[]>([]);
+  const [feedback, setFeedback] = useState<LearnerFeedback | null>(null);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [downloadingReport, setDownloadingReport] = useState(false);
@@ -24,14 +26,16 @@ export function Dashboard() {
     setLoading(true);
     setLoadError(null);
     try {
-      const [analyticsRes, recommendationsRes, confusionRes] = await Promise.all([
+      const [analyticsRes, recommendationsRes, confusionRes, feedbackRes] = await Promise.all([
         client.get<LearnerAnalytics>(`/api/learner/${user.id}/analytics`),
         client.get<{ recommendations: RecommendationItem[] }>(`/api/learner/${user.id}/recommendations`),
         client.get<{ pairs: ConfusionPair[] }>(`/api/learner/${user.id}/confusion-pairs`),
+        client.get<LearnerFeedback>(`/api/learner/${user.id}/feedback`),
       ]);
       setAnalytics(analyticsRes.data);
       setRecommendations(recommendationsRes.data.recommendations);
       setConfusionPairs(confusionRes.data.pairs);
+      setFeedback(feedbackRes.data);
     } catch (err) {
       console.error('Failed to load dashboard data:', err);
       setLoadError('Could not load dashboard data.');
@@ -144,6 +148,8 @@ export function Dashboard() {
         <PracticeNextPanel recommendations={recommendations} />
         <ConfusionPanel pairs={confusionPairs} />
       </section>
+
+      {feedback && <FeedbackPanel feedback={feedback} />}
     </div>
   );
 }
