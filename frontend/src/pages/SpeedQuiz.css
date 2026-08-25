@@ -1,0 +1,10 @@
+.speed-quiz__welcome, .speed-quiz__active { max-width: 720px; margin: 0 auto; padding: var(--space-6); background: var(--color-surface); border: 1px solid var(--color-border); border-radius: var(--radius-lg); text-align: center; }
+.speed-quiz__welcome h2 { font-size: 2.5rem; margin: var(--space-2) 0; }
+.speed-quiz__welcome p, .speed-quiz__welcome li { color: var(--color-text-dim); }
+.speed-quiz__welcome ul { text-align: left; margin: var(--space-5) auto; max-width: 420px; line-height: 1.8; }
+.speed-quiz__eyebrow { font-family: var(--font-mono); text-transform: uppercase; letter-spacing: .08em; color: var(--color-accent); font-size: .8rem; }
+.speed-quiz__status { display: flex; justify-content: space-between; font-family: var(--font-mono); color: var(--color-text-dim); }
+.speed-quiz__status strong { color: var(--color-accent); font-size: 1.4rem; }
+.speed-quiz__prompt { margin: var(--space-5) 0 var(--space-1); color: var(--color-text-dim); }
+.speed-quiz__letter { font-family: var(--font-mono); font-size: 7rem; font-weight: 700; color: var(--color-accent); line-height: 1; margin-bottom: var(--space-4); }
+.speed-quiz__video { display: block; width: 100%; max-height: 320px; object-fit: cover; transform: scaleX(-1); border-radius: var(--radius-md); background: #000; margin-bottom: var(--space-4); }
