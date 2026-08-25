@@ -5,6 +5,10 @@ __pycache__/
 *.bak
 .env
 .DS_Store
+
+# Local dev/test SQLite DB — accumulates throwaway test learners and other
+# local state from running the app and test scripts; not real project state.
+backend/sign_language_platform.db
 backend/data/*
 !backend/data/models/
 backend/data/models/*
