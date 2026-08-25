@@ -9,10 +9,29 @@
   --color-accent: #ffb400;
   --color-accent-dim: #7a5a10;
   --color-accent-glow: rgba(255, 180, 0, 0.35);
+  --color-accent-glow-strong: rgba(255, 180, 0, 0.55);
 
   /* Weak / warning tint — subtle warm red, not alarm red */
   --color-warn: #e2604a;
   --color-warn-dim: #5a2c22;
+  --color-warn-glow: rgba(226, 96, 74, 0.4);
+
+  /* Gradients — amplify the amber identity rather than replace it */
+  --gradient-accent: linear-gradient(135deg, #ffb400 0%, #ff8a00 100%);
+  --gradient-accent-soft: linear-gradient(180deg, rgba(255, 180, 0, 0.16) 0%, rgba(255, 180, 0, 0) 100%);
+  --gradient-surface-glow: radial-gradient(circle at 50% 0%, rgba(255, 180, 0, 0.08) 0%, rgba(255, 180, 0, 0) 60%);
+
+  /* Elevation with glow, for surfaces that should feel "powered on" */
+  --shadow-glow-sm: 0 0 12px var(--color-accent-glow);
+  --shadow-glow-md: 0 4px 24px rgba(255, 180, 0, 0.18);
+  --shadow-lift: 0 8px 24px rgba(0, 0, 0, 0.35);
+
+  /* Motion — purposeful, not ambient: entrance transitions and
+     interaction feedback, never a perpetual idle animation. */
+  --duration-fast: 150ms;
+  --duration-base: 300ms;
+  --duration-entrance: 500ms;
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
 
   /* Text */
   --color-text: #eef1f6;

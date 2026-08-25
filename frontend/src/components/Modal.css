@@ -3,22 +3,42 @@
   inset: 0;
   /* Dims with the existing background token itself, not a new color. */
   background: color-mix(in srgb, var(--color-bg) 75%, transparent);
+  backdrop-filter: blur(3px);
   display: flex;
   align-items: center;
   justify-content: center;
   padding: var(--space-4);
   z-index: 100;
+  animation: backdrop-in var(--duration-fast) ease both;
+}
+
+@keyframes backdrop-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
 }
 
 .modal {
   background: var(--color-surface);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-glow-md), var(--shadow-lift);
   width: 100%;
   max-width: 480px;
   max-height: 85vh;
   overflow-y: auto;
   padding: var(--space-5);
+  animation: modal-in var(--duration-base) var(--ease-out) both;
+}
+
+@keyframes modal-in {
+  from {
+    opacity: 0;
+    transform: translateY(12px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
 }
 
 .modal__header {

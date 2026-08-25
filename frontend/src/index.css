@@ -2,9 +2,19 @@
   box-sizing: border-box;
 }
 
+/* Instrument-panel backdrop: a faint fixed grid + a soft glow seated at
+   the top of the viewport. Both are static (no animation) — this is
+   ambient texture, not motion, so it never competes for attention while
+   someone's mid-practice. */
 body {
   margin: 0;
-  background: var(--color-bg);
+  background-color: var(--color-bg);
+  background-image:
+    radial-gradient(ellipse 1200px 600px at 50% -10%, rgba(255, 180, 0, 0.07), transparent 60%),
+    linear-gradient(rgba(255, 255, 255, 0.025) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.025) 1px, transparent 1px);
+  background-size: auto, 40px 40px, 40px 40px;
+  background-attachment: fixed;
   color: var(--color-text);
   font-family: var(--font-heading);
   -webkit-font-smoothing: antialiased;
@@ -15,6 +25,57 @@ code {
   font-family: var(--font-mono);
 }
 
+/* Consistent glowing focus ring app-wide, on top of whatever
+   component-local focus style already exists. */
+:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 2px;
+}
+
+/* Instrument-panel scrollbar */
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--color-bg);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--color-surface-raised);
+  border: 2px solid var(--color-bg);
+  border-radius: 999px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--color-accent-dim);
+}
+
+* {
+  scrollbar-color: var(--color-surface-raised) var(--color-bg);
+}
+
+/* Shared one-time entrance animation — mount-triggered, never looping. */
+@keyframes rise-in {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+  }
+}
+
 .page {
   min-height: 100vh;
   padding: var(--space-6) var(--space-7);
@@ -22,6 +83,26 @@ code {
   flex-direction: column;
   gap: var(--space-6);
 }
+
+/* fill-mode is "backwards", not "both" — the animation's own end state
+   (opacity: 1, transform: translateY(0)) is already identical to each
+   child's un-animated default, so nothing needs to be forward-filled.
+   That matters because "both"/"forwards" would leave a lingering
+   `transform: translateY(0)` on ancestors like the topbar even after the
+   animation finishes — and any `transform` value other than `none`
+   creates a new containing block for `position: fixed` descendants,
+   which broke fixed-position modals nested inside animated ancestors. */
+.page > * {
+  animation: rise-in var(--duration-entrance) var(--ease-out) backwards;
+}
+
+.page > *:nth-child(1) { animation-delay: 0ms; }
+.page > *:nth-child(2) { animation-delay: 40ms; }
+.page > *:nth-child(3) { animation-delay: 80ms; }
+.page > *:nth-child(4) { animation-delay: 120ms; }
+.page > *:nth-child(5) { animation-delay: 160ms; }
+.page > *:nth-child(6) { animation-delay: 200ms; }
+.page > *:nth-child(n+7) { animation-delay: 240ms; }
 
 @media (max-width: 860px) {
   .page {
@@ -46,12 +127,34 @@ code {
 .content-loading {
   min-height: 50vh;
   display: flex;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
+  gap: var(--space-4);
+}
+
+/* A working AI system "thinking", not a static message — spins only
+   while something is actually loading, so it never runs idle. */
+.content-loading::before {
+  content: '';
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  border: 3px solid var(--color-surface-raised);
+  border-top-color: var(--color-accent);
+  animation: spin 800ms linear infinite;
+  box-shadow: var(--shadow-glow-sm);
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 .btn {
-  background: var(--color-accent);
+  position: relative;
+  background: var(--gradient-accent);
   border: none;
   color: var(--color-bg);
   font-family: var(--font-heading);
@@ -60,16 +163,48 @@ code {
   padding: var(--space-3) var(--space-5);
   border-radius: var(--radius-sm);
   cursor: pointer;
-  transition: opacity 150ms ease;
+  overflow: hidden;
+  /* .btn is also used on router <Link>s (Landing's CTAs, Courses' "Open"),
+     not just <button>s — without this they'd pick up the browser's
+     default link underline in some states. */
+  text-decoration: none;
+  display: inline-block;
+  transition: box-shadow var(--duration-fast) ease, transform var(--duration-fast) ease, opacity var(--duration-fast) ease;
 }
 
 .btn:hover {
-  opacity: 0.85;
+  box-shadow: var(--shadow-glow-md);
+  transform: translateY(-1px);
+}
+
+.btn:active {
+  transform: translateY(0) scale(0.98);
+}
+
+/* A brief diagonal shine sweep on hover — one pass, not a loop. */
+.btn::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(115deg, transparent 30%, rgba(255, 255, 255, 0.35) 50%, transparent 70%);
+  transform: translateX(-100%);
+  transition: transform 600ms ease;
+  pointer-events: none;
+}
+
+.btn:hover::after {
+  transform: translateX(100%);
 }
 
 .btn:disabled {
   opacity: 0.5;
   cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+
+.btn:disabled::after {
+  display: none;
 }
 
 .btn--ghost {
@@ -78,7 +213,12 @@ code {
   color: var(--color-text);
 }
 
+.btn--ghost::after {
+  display: none;
+}
+
 .btn--ghost:hover {
-  opacity: 1;
   border-color: var(--color-accent-dim);
+  box-shadow: var(--shadow-glow-sm);
+  transform: translateY(-1px);
 }
