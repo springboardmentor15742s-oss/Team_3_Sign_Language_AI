@@ -10,14 +10,18 @@ from app.schemas.adaptive_learning import AdaptiveLearningPlanResponse
 from app.schemas.confusion import ConfusionPairsResponse
 from app.schemas.courses import CourseCatalogResponse
 from app.schemas.feedback import LearnerFeedbackResponse
+from app.schemas.history import PracticeHistoryResponse
+from app.schemas.instructor_assignment import AssignmentListResponse
 from app.schemas.learning_analytics_workflow import LearningAnalyticsWorkflowResponse
 from app.schemas.learning_plan import LearningPlanResponse
 from app.schemas.progress import LearnerProgressResponse
 from app.schemas.recommendation import RecommendationsResponse
 from app.services.ai_feedback_service import get_learner_feedback
+from app.services.history_service import get_practice_history
 from app.services.auth_dependency import require_self_or_staff
 from app.services.confusion_service import get_confusion_pairs
 from app.services.course_catalog_service import get_course_catalog
+from app.services.instructor_assignment_service import list_assignments_for_learner
 from app.services.learning_analytics_service import get_learner_analytics
 from app.services.learning_analytics_workflow_service import get_learning_analytics_workflow
 from app.services.adaptive_learning_service import get_adaptive_learning_plan
@@ -108,3 +112,31 @@ def get_learner_analytics_workflow_endpoint(
 ):
     """Completion rate, activity-frequency patterns, commonly-missed/avoided topics, and a current-vs-previous performance comparison."""
     return get_learning_analytics_workflow(db, learner_id)
+
+
+@router.get("/{learner_id}/practice-history", response_model=PracticeHistoryResponse)
+def get_learner_practice_history(
+    learner_id: str,
+    topic_type: Optional[str] = Query(
+        None, description="Restrict to 'letter' or 'motion_sign'; omit for both combined."
+    ),
+    status: Optional[str] = Query(
+        None, description="Restrict to 'pass', 'fail', or 'no_attempt_detected'; omit for all statuses."
+    ),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_self_or_staff),
+):
+    """Full, session-by-session practice history, newest first — the raw log behind the dashboard's aggregated analytics."""
+    return get_practice_history(db, learner_id, topic_type=topic_type, status=status)
+
+
+@router.get("/{learner_id}/assignments", response_model=AssignmentListResponse)
+def get_learner_assignments(
+    learner_id: str,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_self_or_staff),
+):
+    """Practice focuses an instructor has pointed this learner at, newest first.
+    A second, clearly-labeled source shown alongside the auto-generated
+    recommendations — not blended into them."""
+    return {"assignments": list_assignments_for_learner(db, learner_id)}

@@ -20,6 +20,17 @@ class PracticeFeedbackResponse(BaseModel):
     target_letter: str
     predicted_letter: Optional[str] = None
     feedback: str
+    # Tiered feedback fields (ai_feedback_service.generate_activity_feedback)
+    # — added for the Milestone 3 integration task so the immediate
+    # per-attempt response reflects the same skill-tiered engine the
+    # dashboard's aggregate feedback already used, instead of the older
+    # plain pass/fail one-liner. learner_level is the learner's tier
+    # (beginner/intermediate/advanced) at the moment of this attempt;
+    # error/improvement_tip are null on a pass, populated on fail or
+    # no_attempt_detected.
+    learner_level: Optional[str] = None
+    error: Optional[str] = None
+    improvement_tip: Optional[str] = None
     created_at: Optional[datetime] = None
     # Raw MediaPipe hand landmarks (normalized image-space x/y/z) for the
     # captured frame, for the result overlay — null whenever no hand was

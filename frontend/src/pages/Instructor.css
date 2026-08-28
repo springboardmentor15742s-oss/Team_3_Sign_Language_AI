@@ -22,3 +22,15 @@
   white-space: normal;
   max-width: 140px;
 }
+
+.roster-section__learner-link {
+  color: var(--color-text);
+  text-decoration: none;
+  font-weight: 600;
+  transition: color 150ms ease;
+}
+
+.roster-section__learner-link:hover {
+  color: var(--color-accent);
+  text-decoration: underline;
+}

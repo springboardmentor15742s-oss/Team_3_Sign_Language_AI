@@ -9,11 +9,15 @@ import { Dashboard } from './pages/Dashboard';
 import { Practice } from './pages/Practice';
 import { CommonSigns } from './pages/CommonSigns';
 import { MotionSigns } from './pages/MotionSigns';
+import { ConversationalFluency } from './pages/ConversationalFluency';
 import { Courses } from './pages/Courses';
 import { Instructor } from './pages/Instructor';
+import { InstructorLearnerDetail } from './pages/InstructorLearnerDetail';
 import { Admin } from './pages/Admin';
 import { SpeedQuiz } from './pages/SpeedQuiz';
 import { AnalyticsReports } from './pages/AnalyticsReports';
+import { PracticeHistory } from './pages/PracticeHistory';
+import { Profile } from './pages/Profile';
 
 function App() {
   return (
@@ -69,11 +73,22 @@ function App() {
           />
           <Route path="/speed-quiz" element={<ProtectedRoute><SpeedQuiz /></ProtectedRoute>} />
           <Route path="/analytics-reports" element={<ProtectedRoute deniedRoles={INSTRUCTOR_ROLES} redirectTo="/instructor"><AnalyticsReports /></ProtectedRoute>} />
+          <Route path="/practice-history" element={<ProtectedRoute deniedRoles={INSTRUCTOR_ROLES} redirectTo="/instructor"><PracticeHistory /></ProtectedRoute>} />
+          <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
+          <Route path="/conversational-fluency" element={<ProtectedRoute deniedRoles={INSTRUCTOR_ROLES} redirectTo="/instructor"><ConversationalFluency /></ProtectedRoute>} />
           <Route
             path="/instructor"
             element={
               <ProtectedRoute roles={INSTRUCTOR_ROLES} redirectTo="/dashboard">
                 <Instructor />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/instructor/learners/:learnerId"
+            element={
+              <ProtectedRoute roles={INSTRUCTOR_ROLES} redirectTo="/dashboard">
+                <InstructorLearnerDetail />
               </ProtectedRoute>
             }
           />

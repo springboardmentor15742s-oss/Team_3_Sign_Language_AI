@@ -172,12 +172,12 @@
 
 .result--pass .result__badge {
   color: var(--color-accent);
-  background: rgba(255, 180, 0, 0.14);
+  background: color-mix(in srgb, var(--color-accent) 14%, transparent);
 }
 
 .result--fail .result__badge {
   color: var(--color-warn);
-  background: rgba(226, 96, 74, 0.14);
+  background: color-mix(in srgb, var(--color-warn) 14%, transparent);
 }
 
 .result__feedback {

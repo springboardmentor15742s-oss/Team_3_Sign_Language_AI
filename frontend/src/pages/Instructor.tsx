@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useState } from 'react';
+import { Link } from 'react-router-dom';
 import client from '../api/client';
 import '../components/DataTable.css';
 import { Topbar } from '../components/Topbar';
@@ -129,7 +130,11 @@ export function Instructor() {
 
                   return (
                     <tr key={learner.learner_id}>
-                      <td>{learner.name}</td>
+                      <td>
+                        <Link to={`/instructor/learners/${learner.learner_id}`} className="roster-section__learner-link">
+                          {learner.name}
+                        </Link>
+                      </td>
                       <td>{learner.email}</td>
                       <td className="data-table__numeric">{learner.total_attempts}</td>
                       <td

@@ -39,7 +39,7 @@ class FeedbackPerformance(BaseModel):
 
 class FeedbackActivity(BaseModel):
     type: Literal["lesson", "exercise", "quiz", "practice", "revision", "challenge"]
-    difficulty: Literal["basic", "intermediate", "advanced"]
+    difficulty: Literal["beginner", "intermediate", "advanced"]
     topic: str
     instruction: str
 

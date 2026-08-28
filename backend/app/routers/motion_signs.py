@@ -10,6 +10,8 @@ from app.schemas.motion_signs import (
     MotionSignResponse,
     SupportedMotionSignsResponse,
 )
+from app.services.adaptive_learning_service import get_adaptive_learning_plan
+from app.services.ai_feedback_service import generate_activity_feedback
 from app.services.auth_dependency import get_current_user
 from app.services.motion_sign_service import (
     SUPPORTED_MOTION_SIGNS,
@@ -80,7 +82,16 @@ async def submit_motion_sign_attempt(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
-    """Runs an uploaded frame sequence through motion recognition, saves the attempt, and returns feedback."""
+    """
+    Runs an uploaded frame sequence through motion recognition, saves the
+    attempt, and returns feedback.
+
+    Feedback goes through the same skill-tiered ai_feedback_service engine
+    practice.py's submit endpoint uses (Milestone 3 integration: keeps
+    motion-sign attempts on the same "learner activity -> AI feedback"
+    chain as static-letter attempts, instead of a separate hardcoded
+    message dict).
+    """
     if target_sign not in SUPPORTED_MOTION_SIGNS:
         raise HTTPException(status_code=400, detail=f"Unsupported target_sign: {target_sign}")
 
@@ -88,11 +99,8 @@ async def submit_motion_sign_attempt(
     motion_result = recognize_motion_sign(frames)
     assessment = assess_motion_sign(motion_result, target_sign)
 
-    feedback_messages = {
-        "pass": f"Nice work! Your '{target_sign}' matched.",
-        "fail": f"Not quite — that didn't match '{target_sign}'. Try a bigger, clearer motion and try again.",
-        "no_attempt_detected": "We couldn't track your hand(s) through enough of the clip. Make sure they're clearly visible and try again.",
-    }
+    learner_level = get_adaptive_learning_plan(db, current_user.id)["learning_level"]
+    activity_feedback = generate_activity_feedback(assessment, learner_level, topic_type="motion_sign")
 
     attempt_id = None
     created_at = None
@@ -107,6 +115,9 @@ async def submit_motion_sign_attempt(
         correct=assessment["correct"],
         target_sign=assessment["target_sign"],
         predicted_sign=assessment["predicted_sign"],
-        feedback=feedback_messages[assessment["status"]],
+        feedback=activity_feedback["message"],
+        learner_level=activity_feedback["learner_level"],
+        error=activity_feedback["error"],
+        improvement_tip=activity_feedback["improvement_tip"],
         created_at=created_at,
     )

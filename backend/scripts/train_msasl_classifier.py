@@ -3,13 +3,31 @@ Trains the Intermediate Conversational Fluency temporal sign classifier
 on data/processed/msasl_intermediate_landmarks.csv (produced by
 prepare_msasl_dataset.py), using MS-ASL's own train/val/test split
 (assigned by the dataset's creators, not re-split here) — a more
-rigorous held-out evaluation than a self-constructed split. Compares
-RandomForest vs SVM on the val split for model selection, reports final
-numbers on the untouched test split, and saves the better model to
-data/models/msasl_intermediate_classifier.pkl.
+rigorous held-out evaluation than a self-constructed split.
+
+v2 (this file replaces the original all-30-words version): an honest
+experiment (scripts/improve_msasl_classifier.py,
+scripts/vocab_reduction_experiment.py) found that augmenting/re-featuring
+the raw 30-word dataset barely moved test accuracy (32.5% -> ~34%,
+within noise) because several words only had 5-9 real clips. What
+actually helped was restricting the vocabulary to words with enough
+real samples per class — the model was never the bottleneck, sample
+count was. So this script:
+
+  1. Drops any word with fewer than MIN_SAMPLES_PER_CLASS total real
+     clips (train+val+test combined) — MIN_SAMPLES_PER_CLASS=15 keeps
+     16 of the original 30 words and got 49% test accuracy in the
+     experiment, vs. 32.5% keeping all 30.
+  2. Augments the (real-only) train split with mirroring, Gaussian
+     jitter, time-warp and scale-jitter (train_msasl_augmentation.py) —
+     val/test are NEVER augmented, so the reported accuracy is exactly
+     as honest as the original script's.
+  3. Picks feature representation + classifier by val accuracy only
+     (never by test), then reports test accuracy once, on the untouched
+     real test split, with that chosen config refit on train+val.
 
 Run from backend/:
-    venv/bin/python scripts/train_msasl_classifier.py
+    python3 scripts/train_msasl_classifier.py
 """
 
 import csv
@@ -18,8 +36,8 @@ from pathlib import Path
 import joblib
 import matplotlib.pyplot as plt
 import numpy as np
-from sklearn.calibration import CalibratedClassifierCV
-from sklearn.ensemble import RandomForestClassifier
+from sklearn.ensemble import HistGradientBoostingClassifier, RandomForestClassifier
+from sklearn.linear_model import LogisticRegression
 from sklearn.metrics import (
     ConfusionMatrixDisplay,
     accuracy_score,
@@ -30,7 +48,14 @@ from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import StandardScaler
 from sklearn.svm import SVC
 
-from app.services.word_landmark_features import FIXED_FRAMES
+from app.services.msasl_augmentation import augment_dataset
+from app.services.word_landmark_features import (
+    FIXED_FRAMES,
+    HAND_LANDMARK_COUNT,
+    POSE_ORDER,
+    flatten_features,
+    pooled_features,
+)
 
 BACKEND_ROOT = Path(__file__).resolve().parent.parent
 COURSE = "intermediate"
@@ -39,64 +64,98 @@ MODEL_PATH = BACKEND_ROOT / "data" / "models" / f"msasl_{COURSE}_classifier.pkl"
 CONFUSION_MATRIX_PNG = BACKEND_ROOT / "data" / "processed" / f"msasl_{COURSE}_confusion_matrix.png"
 
 RANDOM_SEED = 42
+MIN_SAMPLES_PER_CLASS = 15
+POINTS_PER_FRAME = len(POSE_ORDER) + HAND_LANDMARK_COUNT * 2
 
 
 def load_dataset():
     with open(FEATURES_CSV, newline="") as f:
         reader = csv.reader(f)
-        next(reader)  # header
+        next(reader)
         rows = list(reader)
-
     labels = np.array([row[0] for row in rows])
     splits = np.array([row[1] for row in rows])
-    features = np.array([[float(v) for v in row[4:]] for row in rows])
-    return features, labels, splits
+    flat = np.array([[float(v) for v in row[4:]] for row in rows])
+    seqs = flat.reshape(len(rows), FIXED_FRAMES, POINTS_PER_FRAME, 3)
+    return seqs, labels, splits
 
 
 def main():
     if not FEATURES_CSV.exists():
         raise FileNotFoundError(f"Feature CSV not found: {FEATURES_CSV}. Run prepare_msasl_dataset.py first.")
 
-    X, y, splits = load_dataset()
-    classes = sorted(set(y))
-    print(f"Loaded {len(y)} samples across {len(classes)} classes")
-    for s in ("train", "val", "test"):
-        print(f"  {s}: {(splits == s).sum()} samples")
+    seqs, labels, splits = load_dataset()
+    all_classes = sorted(set(labels))
+    print(f"Loaded {len(labels)} real samples across {len(all_classes)} words")
 
-    X_train, y_train = X[splits == "train"], y[splits == "train"]
-    X_val, y_val = X[splits == "val"], y[splits == "val"]
-    X_test, y_test = X[splits == "test"], y[splits == "test"]
+    from collections import Counter
+    counts = Counter(labels)
+    keep = {w for w, n in counts.items() if n >= MIN_SAMPLES_PER_CLASS}
+    dropped = sorted(set(all_classes) - keep)
+    print(f"Keeping {len(keep)} words with >= {MIN_SAMPLES_PER_CLASS} real samples each")
+    print(f"Dropped for insufficient data (<{MIN_SAMPLES_PER_CLASS} samples): {dropped}")
 
-    candidates = {
-        "RandomForest": RandomForestClassifier(n_estimators=300, random_state=RANDOM_SEED, n_jobs=-1),
-        "SVM": Pipeline([
+    mask = np.isin(labels, list(keep))
+    seqs, labels, splits = seqs[mask], labels[mask], splits[mask]
+    classes = sorted(keep)
+
+    seq_train, y_train = seqs[splits == "train"], labels[splits == "train"]
+    seq_val, y_val = seqs[splits == "val"], labels[splits == "val"]
+    seq_test, y_test = seqs[splits == "test"], labels[splits == "test"]
+    print(f"  train: {len(y_train)}  val: {len(y_val)}  test: {len(y_test)}")
+
+    aug_seq, aug_labels = augment_dataset(seq_train, y_train, per_sample=4, random_seed=RANDOM_SEED)
+    seq_train_aug = np.concatenate([seq_train, aug_seq], axis=0)
+    y_train_aug = np.concatenate([y_train, aug_labels], axis=0)
+    print(f"  train after augmentation: {len(y_train_aug)} ({len(aug_labels)} synthetic + {len(y_train)} real)")
+
+    feature_builders = {"raw_flatten": flatten_features, "pooled_stats": pooled_features}
+    classifiers = {
+        "RandomForest": lambda: RandomForestClassifier(
+            n_estimators=400, max_depth=18, min_samples_leaf=2, random_state=RANDOM_SEED, n_jobs=-1
+        ),
+        "HistGradBoosting": lambda: HistGradientBoostingClassifier(
+            max_iter=150, max_depth=4, learning_rate=0.1, random_state=RANDOM_SEED
+        ),
+        "SVM_rbf": lambda: Pipeline([
             ("scaler", StandardScaler()),
-            (
-                "svc",
-                CalibratedClassifierCV(
-                    SVC(kernel="rbf", C=10, gamma="scale", random_state=RANDOM_SEED), ensemble=False
-                ),
-            ),
+            ("svc", SVC(kernel="rbf", C=8, gamma="scale", probability=True, random_state=RANDOM_SEED)),
+        ]),
+        "LogReg": lambda: Pipeline([
+            ("scaler", StandardScaler()),
+            ("clf", LogisticRegression(max_iter=3000, C=1.0, random_state=RANDOM_SEED)),
         ]),
     }
+    train_variants = {"no_aug": (seq_train, y_train), "with_aug": (seq_train_aug, y_train_aug)}
 
-    val_results = {}
-    for name, model in candidates.items():
-        model.fit(X_train, y_train)
-        val_preds = model.predict(X_val)
-        val_acc = accuracy_score(y_val, val_preds)
-        val_results[name] = {"model": model, "val_accuracy": val_acc}
-        print(f"{name} validation accuracy: {val_acc:.4f}")
+    results = []
+    for fname, fbuild in feature_builders.items():
+        Xval = fbuild(seq_val)
+        for tname, (seq_t, y_t) in train_variants.items():
+            Xtrain = fbuild(seq_t)
+            for cname, cbuild in classifiers.items():
+                model = cbuild()
+                model.fit(Xtrain, y_t)
+                val_acc = accuracy_score(y_val, model.predict(Xval))
+                results.append((fname, tname, cname, val_acc))
+                print(f"[{fname:12s} | {tname:9s} | {cname:16s}] val acc = {val_acc:.4f}")
 
-    best_name = max(val_results, key=lambda n: val_results[n]["val_accuracy"])
-    best_model = val_results[best_name]["model"]
-    print(f"\nBest model on validation: {best_name} (val accuracy {val_results[best_name]['val_accuracy']:.4f})\n")
+    results.sort(key=lambda r: r[3], reverse=True)
+    best_fname, best_tname, best_cname, best_val_acc = results[0]
+    print(f"\nBest config on val: features={best_fname}, train={best_tname}, model={best_cname} (val acc {best_val_acc:.4f})")
 
-    test_preds = best_model.predict(X_test)
+    fbuild = feature_builders[best_fname]
+    seq_t, y_t = train_variants[best_tname]
+    seq_trainval = np.concatenate([seq_t, seq_val], axis=0)
+    y_trainval = np.concatenate([y_t, y_val], axis=0)
+
+    final_model = classifiers[best_cname]()
+    final_model.fit(fbuild(seq_trainval), y_trainval)
+
+    Xtest = fbuild(seq_test)
+    test_preds = final_model.predict(Xtest)
     test_acc = accuracy_score(y_test, test_preds)
-    print(f"=== Final test accuracy ({best_name}): {test_acc:.4f} (n={len(y_test)}) ===\n")
-
-    print(f"=== Classification report on TEST split ({best_name}) ===")
+    print(f"\n=== Final test accuracy ({best_cname}, {best_fname}, {best_tname}): {test_acc:.4f} (n={len(y_test)}) ===\n")
     print(classification_report(y_test, test_preds, labels=classes, zero_division=0))
 
     cm = confusion_matrix(y_test, test_preds, labels=classes)
@@ -108,22 +167,26 @@ def main():
     MODEL_PATH.parent.mkdir(parents=True, exist_ok=True)
     joblib.dump(
         {
-            "model": best_model,
+            "model": final_model,
             "classes": classes,
-            "model_name": best_name,
+            "model_name": best_cname,
+            "feature_set": best_fname,
             "fixed_frames": FIXED_FRAMES,
             "vocabulary_source": f"MS-ASL {COURSE} curriculum (C-UDA 0.1 licensed, research/computational use only)",
             "test_accuracy": test_acc,
+            "min_samples_per_class": MIN_SAMPLES_PER_CLASS,
+            "dropped_for_insufficient_data": dropped,
+            "trained_with_augmentation": best_tname == "with_aug",
         },
         MODEL_PATH,
     )
-    print(f"\nSaved best model ({best_name}) to: {MODEL_PATH}")
+    print(f"\nSaved model to: {MODEL_PATH}")
 
-    fig, ax = plt.subplots(figsize=(13, 13))
+    fig, ax = plt.subplots(figsize=(9, 9))
     ConfusionMatrixDisplay(confusion_matrix=cm, display_labels=classes).plot(
         ax=ax, xticks_rotation="vertical", colorbar=False
     )
-    ax.set_title(f"{best_name} test-split confusion matrix (accuracy {test_acc:.2%})")
+    ax.set_title(f"{best_cname} test-split confusion matrix (accuracy {test_acc:.2%}, {len(classes)} words)")
     fig.tight_layout()
     fig.savefig(CONFUSION_MATRIX_PNG, dpi=150)
     print(f"Saved confusion matrix plot to: {CONFUSION_MATRIX_PNG}")

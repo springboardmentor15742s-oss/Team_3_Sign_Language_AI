@@ -27,6 +27,13 @@ class MotionSignFeedbackResponse(BaseModel):
     target_sign: str
     predicted_sign: Optional[str] = None
     feedback: str
+    # Tiered feedback fields — see PracticeFeedbackResponse for why these
+    # were added (Milestone 3 integration: wire the real tiered
+    # ai_feedback_service engine into the submit flow instead of the
+    # older plain pass/fail message).
+    learner_level: Optional[str] = None
+    error: Optional[str] = None
+    improvement_tip: Optional[str] = None
     created_at: Optional[datetime] = None
 
     class Config:

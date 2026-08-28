@@ -72,6 +72,41 @@ def _get_pose_landmarker() -> PoseLandmarker:
     return _pose_landmarker
 
 
+def _landmarks_for_image(bgr_image: np.ndarray) -> np.ndarray:
+    """Runs pose + both-hand detection on one BGR frame, returning a
+    (49, 3) row in word_landmark_features.POSE_ORDER-then-hands order,
+    NaN wherever nothing was detected. Shared by both the offline
+    (video file) and live (uploaded frame sequence) extraction paths
+    below, so training and inference can never drift apart."""
+    hand_landmarker = _get_hand_landmarker()
+    pose_landmarker = _get_pose_landmarker()
+
+    rgb_image = cv2.cvtColor(bgr_image, cv2.COLOR_BGR2RGB)
+    mp_image = mp.Image(image_format=mp.ImageFormat.SRGB, data=rgb_image)
+
+    point_row = np.full((POINTS_PER_FRAME, 3), np.nan, dtype=np.float64)
+
+    pose_result = pose_landmarker.detect(mp_image)
+    if pose_result.pose_landmarks:
+        landmarks = pose_result.pose_landmarks[0]
+        for pi, name in enumerate(POSE_ORDER):
+            lm = landmarks[POSE_LANDMARKS[name]]
+            point_row[pi] = (lm.x, lm.y, lm.z)
+
+    hand_result = hand_landmarker.detect(mp_image)
+    for hand_landmarks, handedness in zip(hand_result.hand_landmarks, hand_result.handedness):
+        # MediaPipe's own Left/Right convention — kept consistent with
+        # how the Kaggle dataset's left_hand/right_hand columns were
+        # produced, since both come from the same underlying model family.
+        label = handedness[0].category_name
+        start = LEFT_HAND_START if label == "Left" else RIGHT_HAND_START
+        for hi in range(HAND_LANDMARK_COUNT):
+            lm = hand_landmarks[hi]
+            point_row[start + hi] = (lm.x, lm.y, lm.z)
+
+    return point_row
+
+
 def extract_raw_sequence_from_video(video_path: str, frame_stride: int = 1) -> np.ndarray:
     """
     Reads every `frame_stride`-th frame of video_path, runs pose + both-
@@ -87,9 +122,6 @@ def extract_raw_sequence_from_video(video_path: str, frame_stride: int = 1) -> n
     if not cap.isOpened():
         raise FileNotFoundError(f"Could not open video: {video_path}")
 
-    hand_landmarker = _get_hand_landmarker()
-    pose_landmarker = _get_pose_landmarker()
-
     frames_out = []
     try:
         frame_idx = 0
@@ -100,31 +132,7 @@ def extract_raw_sequence_from_video(video_path: str, frame_stride: int = 1) -> n
             if frame_idx % frame_stride != 0:
                 frame_idx += 1
                 continue
-
-            rgb_image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
-            mp_image = mp.Image(image_format=mp.ImageFormat.SRGB, data=rgb_image)
-
-            point_row = np.full((POINTS_PER_FRAME, 3), np.nan, dtype=np.float64)
-
-            pose_result = pose_landmarker.detect(mp_image)
-            if pose_result.pose_landmarks:
-                landmarks = pose_result.pose_landmarks[0]
-                for pi, name in enumerate(POSE_ORDER):
-                    lm = landmarks[POSE_LANDMARKS[name]]
-                    point_row[pi] = (lm.x, lm.y, lm.z)
-
-            hand_result = hand_landmarker.detect(mp_image)
-            for hand_landmarks, handedness in zip(hand_result.hand_landmarks, hand_result.handedness):
-                # MediaPipe's own Left/Right convention — kept consistent with
-                # how the Kaggle dataset's left_hand/right_hand columns were
-                # produced, since both come from the same underlying model family.
-                label = handedness[0].category_name
-                start = LEFT_HAND_START if label == "Left" else RIGHT_HAND_START
-                for hi in range(HAND_LANDMARK_COUNT):
-                    lm = hand_landmarks[hi]
-                    point_row[start + hi] = (lm.x, lm.y, lm.z)
-
-            frames_out.append(point_row)
+            frames_out.append(_landmarks_for_image(image))
             frame_idx += 1
     finally:
         cap.release()
@@ -132,3 +140,17 @@ def extract_raw_sequence_from_video(video_path: str, frame_stride: int = 1) -> n
     if not frames_out:
         return np.empty((0, POINTS_PER_FRAME, 3), dtype=np.float64)
     return np.stack(frames_out, axis=0)
+
+
+def extract_raw_sequence_from_frames(frames: list) -> np.ndarray:
+    """
+    Same as extract_raw_sequence_from_video, but for an already-decoded
+    list of BGR frames (e.g. individual images uploaded from a live
+    webcam capture, same shape of input motion_sign_service's
+    recognize_motion_sign takes) rather than a video file on disk — the
+    live-inference counterpart used by word_sign_service, so serving
+    never has to round-trip through a temp video file.
+    """
+    if not frames:
+        return np.empty((0, POINTS_PER_FRAME, 3), dtype=np.float64)
+    return np.stack([_landmarks_for_image(f) for f in frames], axis=0)

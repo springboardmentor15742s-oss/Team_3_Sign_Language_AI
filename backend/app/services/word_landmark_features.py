@@ -183,3 +183,36 @@ def feature_column_names(fixed_frames: int = FIXED_FRAMES) -> list[str]:
             for a in AXES:
                 names.append(f"f{f}_rhand{hi}_{a}")
     return names
+
+
+# --- classifier input feature sets, shared between training
+# (train_msasl_classifier.py) and live inference (word_sign_service.py)
+# so a model trained on one representation is never fed the other.
+# seqs here is a batch of already-normalized, already-resampled
+# sequences: shape (n_samples, FIXED_FRAMES, POINTS_PER_FRAME, 3).
+
+def flatten_features(seqs: np.ndarray) -> np.ndarray:
+    """The original representation: every (frame, point, axis) value,
+    flattened. High-dimensional (FIXED_FRAMES * POINTS_PER_FRAME * 3 =
+    2205 at the defaults) relative to this project's small real sample
+    counts, but keeps full temporal detail."""
+    return seqs.reshape(len(seqs), -1)
+
+
+def pooled_features(seqs: np.ndarray) -> np.ndarray:
+    """A more compact representation: per (point, axis) mean/std/min/max/
+    range across the FIXED_FRAMES frames, plus mean-abs frame-to-frame
+    delta (a simple motion-energy signal) — 6 stats x POINTS_PER_FRAME x
+    3 axes. Trades away exact temporal ordering for far fewer dimensions
+    per sample, which matters more when real training samples are scarce."""
+    mean = seqs.mean(axis=1)
+    std = seqs.std(axis=1)
+    mn = seqs.min(axis=1)
+    mx = seqs.max(axis=1)
+    value_range = mx - mn
+    motion = np.abs(np.diff(seqs, axis=1)).mean(axis=1)
+    pooled = np.concatenate([mean, std, mn, mx, value_range, motion], axis=2)
+    return pooled.reshape(len(seqs), -1)
+
+
+FEATURE_BUILDERS = {"raw_flatten": flatten_features, "pooled_stats": pooled_features}

@@ -10,9 +10,12 @@ import { ActivityTimelinePanel } from '../components/ActivityTimelinePanel';
 import { ForecastPanel } from '../components/ForecastPanel';
 import { AdaptiveLearningPanel } from '../components/AdaptiveLearningPanel';
 import { FeedbackPanel } from '../components/FeedbackPanel';
+import { LearningPlanPanel } from '../components/LearningPlanPanel';
+import { AssignedFocusPanel } from '../components/AssignedFocusPanel';
 import { StatsRow, StatTile } from '../components/StatsRow';
 import { Topbar } from '../components/Topbar';
-import { AdaptiveLearningPlan, ConfusionPair, LearnerAnalytics, LearnerFeedback, RecommendationItem } from '../types/analytics';
+import { AdaptiveLearningPlan, ConfusionPair, LearnerAnalytics, LearnerFeedback, LearningPlan, RecommendationItem } from '../types/analytics';
+import { Assignment, AssignmentListResponse } from '../types/instructorAssignment';
 import { LearnerProgress } from '../types/progress';
 import './Dashboard.css';
 
@@ -24,6 +27,8 @@ export function Dashboard() {
   const [progress, setProgress] = useState<LearnerProgress | null>(null);
   const [adaptivePlan, setAdaptivePlan] = useState<AdaptiveLearningPlan | null>(null);
   const [feedback, setFeedback] = useState<LearnerFeedback | null>(null);
+  const [learningPlan, setLearningPlan] = useState<LearningPlan | null>(null);
+  const [assignments, setAssignments] = useState<Assignment[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [downloadingReport, setDownloadingReport] = useState(false);
@@ -34,13 +39,15 @@ export function Dashboard() {
     setLoading(true);
     setLoadError(null);
     try {
-      const [analyticsRes, recommendationsRes, confusionRes, progressRes, adaptivePlanRes, feedbackRes] = await Promise.all([
+      const [analyticsRes, recommendationsRes, confusionRes, progressRes, adaptivePlanRes, feedbackRes, learningPlanRes, assignmentsRes] = await Promise.all([
         client.get<LearnerAnalytics>(`/api/learner/${user.id}/analytics`),
         client.get<{ recommendations: RecommendationItem[] }>(`/api/learner/${user.id}/recommendations`),
         client.get<{ pairs: ConfusionPair[] }>(`/api/learner/${user.id}/confusion-pairs`),
         client.get<LearnerProgress>(`/api/learner/${user.id}/progress`),
         client.get<AdaptiveLearningPlan>(`/api/learner/${user.id}/adaptive-learning-plan`),
         client.get<LearnerFeedback>(`/api/learner/${user.id}/feedback`),
+        client.get<LearningPlan>(`/api/learner/${user.id}/learning-plan`),
+        client.get<AssignmentListResponse>(`/api/learner/${user.id}/assignments`),
       ]);
       setAnalytics(analyticsRes.data);
       setRecommendations(recommendationsRes.data.recommendations);
@@ -48,6 +55,8 @@ export function Dashboard() {
       setProgress(progressRes.data);
       setAdaptivePlan(adaptivePlanRes.data);
       setFeedback(feedbackRes.data);
+      setLearningPlan(learningPlanRes.data);
+      setAssignments(assignmentsRes.data.assignments);
     } catch (err) {
       console.error('Failed to load dashboard data:', err);
       setLoadError('Could not load dashboard data.');
@@ -179,8 +188,11 @@ export function Dashboard() {
         <ConfusionPanel pairs={confusionPairs} />
       </section>
 
+      {assignments.length > 0 && <AssignedFocusPanel assignments={assignments} />}
+
       {adaptivePlan && <AdaptiveLearningPanel plan={adaptivePlan} />}
       {feedback && <FeedbackPanel feedback={feedback} />}
+      {learningPlan && <LearningPlanPanel plan={learningPlan} />}
 
       {progress && (
         <>

@@ -1,0 +1,83 @@
+.word-signs__intro {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  padding: var(--space-4) var(--space-5);
+}
+
+.word-signs__intro p {
+  margin: 0;
+  font-size: 0.9rem;
+  color: var(--color-text-dim);
+  line-height: 1.5;
+}
+
+.word-signs__intro strong {
+  color: var(--color-accent);
+}
+
+.word-signs__picker {
+  display: flex;
+  gap: var(--space-3);
+  flex-wrap: wrap;
+}
+
+.word-signs__pill {
+  font-family: var(--font-heading);
+  font-weight: 600;
+  font-size: 0.85rem;
+  padding: var(--space-2) var(--space-5);
+  border-radius: 999px;
+  border: 1px solid var(--color-border);
+  background: var(--color-surface);
+  color: var(--color-text-dim);
+  cursor: pointer;
+  transition: border-color 150ms ease, color 150ms ease, box-shadow 150ms ease;
+}
+
+.word-signs__pill:hover:not(:disabled) {
+  border-color: var(--color-accent-dim);
+  color: var(--color-text);
+}
+
+.word-signs__pill--active {
+  border-color: var(--color-accent);
+  color: var(--color-accent);
+  box-shadow: var(--shadow-glow-sm);
+}
+
+.word-signs__pill:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Same corner as .countdown-badge (they're never shown at the same
+   time — countdown hands off to recording once it elapses), but a
+   pill rather than a circle since it also carries the live frame count.
+   Shared selector name/rule with MotionSigns.css by design — identical
+   look for the same UI element on either page. */
+.recording-badge {
+  position: absolute;
+  top: var(--space-3);
+  right: var(--space-3);
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: 6px 14px;
+  border-radius: 999px;
+  background: var(--color-surface-raised);
+  border: 2px solid var(--color-warn);
+  font-family: var(--font-mono);
+  font-weight: 600;
+  font-size: 0.8rem;
+  color: var(--color-warn);
+  z-index: 3;
+}
+
+.recording-badge__dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--color-warn);
+  animation: live-pulse 0.8s ease-in-out infinite;
+}

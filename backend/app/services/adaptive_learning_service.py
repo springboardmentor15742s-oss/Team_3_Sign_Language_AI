@@ -66,17 +66,17 @@ def _activities(topic: str, topic_type: str, level: str, accuracy: float | None,
 
     if accuracy is None:
         return [
-            {"type": "lesson", "difficulty": "basic", "topic": topic, "instruction": f"Learn the {topic} {label} and its key landmarks."},
-            {"type": "practice", "difficulty": "basic", "topic": topic, "instruction": f"Complete three guided {topic} captures to establish a baseline."},
-            {"type": "quiz", "difficulty": "basic", "topic": topic, "instruction": f"Take a short {topic} assessment after the guided practice."},
+            {"type": "lesson", "difficulty": "beginner", "topic": topic, "instruction": f"Learn the {topic} {label} and its key landmarks."},
+            {"type": "practice", "difficulty": "beginner", "topic": topic, "instruction": f"Complete three guided {topic} captures to establish a baseline."},
+            {"type": "quiz", "difficulty": "beginner", "topic": topic, "instruction": f"Take a short {topic} assessment after the guided practice."},
         ]
 
     if accuracy < 60:
         if level == "beginner":
             return [
-                {"type": "lesson", "difficulty": "basic", "topic": topic, "instruction": f"Review the basic {topic} {label} before practising."},
-                {"type": "exercise", "difficulty": "basic", "topic": topic, "instruction": f"Complete slow, guided {topic} exercises."},
-                {"type": "quiz", "difficulty": "basic", "topic": topic, "instruction": f"Retake an easy {topic} check after three captures."},
+                {"type": "lesson", "difficulty": "beginner", "topic": topic, "instruction": f"Review the basic {topic} {label} before practising."},
+                {"type": "exercise", "difficulty": "beginner", "topic": topic, "instruction": f"Complete slow, guided {topic} exercises."},
+                {"type": "quiz", "difficulty": "beginner", "topic": topic, "instruction": f"Retake an easy {topic} check after three captures."},
             ]
         return [
             {"type": "revision", "difficulty": "intermediate", "topic": topic, "instruction": f"Revisit the {topic} concept and compare it with similar {label}s."},
