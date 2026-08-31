@@ -1,0 +1,20 @@
+services:
+  backend:
+    build:
+      context: ./backend
+    ports:
+      - "8000:8000"
+    volumes:
+      # Bind-mount the existing SQLite file so writes made while the
+      # container runs (new practice attempts, etc.) persist back to the
+      # host and survive container rebuilds, instead of being baked
+      # read-only into the image.
+      - ./backend/sign_language_platform.db:/app/sign_language_platform.db
+
+  frontend:
+    build:
+      context: ./frontend
+    ports:
+      - "3000:80"
+    depends_on:
+      - backend

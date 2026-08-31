@@ -1,0 +1,97 @@
+.profile-header {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  padding: var(--space-5);
+  margin: var(--space-5) 0;
+}
+
+.profile-header__avatar {
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-heading);
+  font-weight: 700;
+  font-size: 1.5rem;
+  color: #fff;
+  background: var(--gradient-accent);
+  flex-shrink: 0;
+}
+
+.profile-header__name {
+  margin: 0;
+  font-family: var(--font-heading);
+  font-weight: 700;
+  font-size: 1.3rem;
+  color: var(--color-text);
+}
+
+.profile-header__email {
+  margin: var(--space-1) 0 0;
+  color: var(--color-text-dim);
+  font-size: 0.9rem;
+}
+
+.profile-header__role {
+  margin-top: var(--space-2);
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--color-text-dim);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  padding: 3px 8px;
+  display: inline-block;
+}
+
+.profile-form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.profile-form__field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  font-family: var(--font-heading);
+  font-size: 0.85rem;
+  color: var(--color-text-dim);
+}
+
+.profile-form__field input,
+.profile-form__field select,
+.profile-form__field textarea {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  padding: var(--space-3);
+  font-family: var(--font-heading);
+  font-size: 0.95rem;
+  color: var(--color-text);
+}
+
+.profile-form__field textarea {
+  resize: vertical;
+  min-height: 80px;
+}
+
+.profile-form__field input:focus,
+.profile-form__field select:focus,
+.profile-form__field textarea:focus {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 1px;
+}
+
+.profile-form__actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}

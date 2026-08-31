@@ -1,0 +1,45 @@
+.weak-areas-panel {
+  margin-top: var(--space-4);
+}
+
+.weak-areas-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.weak-areas-list__item {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding-bottom: var(--space-3);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.weak-areas-list__item:last-child {
+  border-bottom: none;
+  padding-bottom: 0;
+}
+
+.weak-areas-list__letter {
+  font-family: var(--font-mono);
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: var(--color-warn);
+  min-width: 2ch;
+}
+
+.weak-areas-list__stats {
+  flex: 1;
+  font-size: 0.85rem;
+  color: var(--color-text-dim);
+}
+
+.weak-areas-list__assign {
+  flex-shrink: 0;
+  padding: var(--space-2) var(--space-4);
+  font-size: 0.8rem;
+}

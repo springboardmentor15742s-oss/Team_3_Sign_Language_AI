@@ -1,0 +1,13 @@
+venv/
+__pycache__/
+**/__pycache__/
+*.pyc
+.env
+
+# Not needed at runtime — only used by training/data-prep scripts (1.2GB+)
+data/asl_alphabet/
+data/asl-alphabet.zip
+data/processed/
+
+# Fetched fresh at build time instead (see Dockerfile) — not tracked in git
+data/models/hand_landmarker.task

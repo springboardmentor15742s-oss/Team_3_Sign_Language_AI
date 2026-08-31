@@ -1,0 +1,20 @@
+.instructor-learner-detail__back {
+  display: inline-block;
+  font-family: var(--font-heading);
+  font-weight: 600;
+  font-size: 0.85rem;
+  color: var(--color-text-dim);
+  text-decoration: none;
+  transition: color 150ms ease;
+}
+
+.instructor-learner-detail__back:hover {
+  color: var(--color-accent);
+}
+
+.instructor-learner-detail__email {
+  margin: calc(var(--space-2) * -1) 0 0;
+  font-family: var(--font-mono);
+  font-size: 0.8rem;
+  color: var(--color-text-dim);
+}

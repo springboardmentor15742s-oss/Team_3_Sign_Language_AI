@@ -1,0 +1,33 @@
+{
+  "source": {
+    "name": "MS-ASL",
+    "version": "2019",
+    "provider": "Microsoft Research",
+    "license": "Computational Use of Data Agreement (C-UDA 0.1)",
+    "license_file": "../external/msasl/MS-ASL.zip::MS-ASL/C-UDA-0.1_annotated_discussion.pdf",
+    "citation": "Vaezi Joze, H. and Koller, O. (2019). MS-ASL: A Large-Scale Data Set and Benchmark for Understanding American Sign Language.",
+    "important": "This curriculum is for research and computational use only. Review the C-UDA before training, publishing, redistributing clips, or using it commercially."
+  },
+  "courses": {
+    "intermediate": {
+      "title": "Intermediate Conversational Fluency",
+      "description": "Word-level building blocks for conversational ASL. MS-ASL is an isolated-sign dataset, so it does not train sentence translation.",
+      "glosses": [
+        "understand", "explain", "remember", "discuss", "question", "answer", "tell", "ask",
+        "decide", "meaning", "language", "interpreter", "introduce", "relationship", "serious",
+        "important", "practice", "meet", "together", "change", "feel", "think", "know", "learn",
+        "not understand", "not know", "how are you", "what's up", "nice to meet you", "excuse me"
+      ]
+    },
+    "professional": {
+      "title": "Professional & Workplace Communication",
+      "description": "Workplace vocabulary for ASL practice. These are individual signs, not a substitute for qualified workplace interpretation.",
+      "glosses": [
+        "work", "business", "office", "meeting", "schedule", "email", "computer", "manager",
+        "boss", "teacher", "nurse", "doctor", "engineer", "lawyer", "accountant", "scientist",
+        "research", "education", "university", "college", "pay", "money", "bank", "government",
+        "police", "explain", "inform", "apply", "check", "lead", "team", "plan"
+      ]
+    }
+  }
+}

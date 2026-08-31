@@ -1,0 +1,453 @@
+.panel {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  padding: var(--space-5);
+  flex: 1;
+  min-width: 0;
+  transition: border-color var(--duration-fast) ease, box-shadow var(--duration-fast) ease;
+}
+
+.panel:hover {
+  border-color: var(--color-accent-dim);
+  box-shadow: var(--shadow-glow-sm);
+}
+
+.panel__title {
+  margin: 0 0 var(--space-4);
+  font-family: var(--font-heading);
+  font-size: 0.95rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--color-text-dim);
+}
+
+.panel__empty {
+  margin: 0;
+  color: var(--color-text-dim);
+  font-size: 0.9rem;
+}
+
+/* Practice next */
+
+.rank-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.rank-list__item {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-3);
+  padding-bottom: var(--space-3);
+  border-bottom: 1px solid var(--color-border);
+  text-decoration: none;
+  color: inherit;
+  transition: background-color 150ms ease;
+}
+
+/* The clickable row is now nested one level inside its <li>, so
+   :last-child on the row itself would always match (it's the only
+   child of its own li) — target the li's position instead. */
+.rank-list li:last-child .rank-list__item {
+  border-bottom: none;
+  padding-bottom: 0;
+}
+
+.rank-list__item:hover {
+  background-color: var(--color-surface-raised);
+}
+
+.rank-list__item:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 2px;
+}
+
+.rank-list__rank {
+  font-family: var(--font-mono);
+  font-size: 0.8rem;
+  color: var(--color-text-faint);
+  width: 1.2em;
+}
+
+.rank-list__letter {
+  font-family: var(--font-mono);
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: var(--color-accent);
+  min-width: 2ch;
+}
+
+.rank-list__reason {
+  font-size: 0.85rem;
+  color: var(--color-text-dim);
+}
+
+/* Adaptive learning plan */
+
+.adaptive-plan {
+  margin-top: var(--space-4);
+}
+
+.adaptive-plan__header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: var(--space-3);
+}
+
+.adaptive-plan__summary,
+.adaptive-plan__focus,
+.adaptive-plan__next {
+  margin: 0;
+  color: var(--color-text-dim);
+  font-size: 0.9rem;
+}
+
+.adaptive-plan__focus {
+  margin-top: var(--space-4);
+}
+
+.adaptive-plan__next {
+  margin: var(--space-4) 0;
+}
+
+.adaptive-plan__level,
+.adaptive-plan__activity-type {
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.adaptive-plan__level {
+  padding: 4px 8px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  color: var(--color-text-dim);
+}
+
+.adaptive-plan__level--advanced { color: var(--color-accent); border-color: var(--color-accent-dim); }
+.adaptive-plan__level--beginner { color: var(--color-warn); }
+
+.adaptive-plan__activities {
+  margin: var(--space-3) 0 0;
+  padding-left: 1.4rem;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  color: var(--color-text);
+  font-size: 0.9rem;
+}
+
+.adaptive-plan__activity-type {
+  margin-right: var(--space-2);
+  color: var(--color-accent);
+}
+
+/* Where it slips */
+
+.confusion-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.confusion-list__item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-bottom: var(--space-3);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.confusion-list__item:last-child {
+  border-bottom: none;
+  padding-bottom: 0;
+}
+
+.confusion-list__pair {
+  font-family: var(--font-mono);
+  font-size: 1.05rem;
+  color: var(--color-text);
+}
+
+.confusion-list__arrow {
+  color: var(--color-warn);
+}
+
+.confusion-list__count {
+  font-family: var(--font-mono);
+  font-size: 0.85rem;
+  color: var(--color-text-dim);
+}
+
+/* Achievements */
+
+.achievement-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.achievement-item {
+  padding-bottom: var(--space-4);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.achievement-item:last-child {
+  border-bottom: none;
+  padding-bottom: 0;
+}
+
+.achievement-item__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+}
+
+.achievement-item__label {
+  font-family: var(--font-heading);
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--color-text);
+}
+
+.achievement-item--unlocked .achievement-item__label {
+  color: var(--color-accent);
+}
+
+.achievement-item__badge {
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--color-accent);
+  border: 1px solid var(--color-accent-dim);
+  border-radius: var(--radius-sm);
+  padding: 2px 6px;
+}
+
+.achievement-item__description {
+  margin: var(--space-1) 0 var(--space-2);
+  font-size: 0.82rem;
+  color: var(--color-text-dim);
+}
+
+.achievement-item__track {
+  height: 6px;
+  border-radius: var(--radius-sm);
+  background: var(--color-surface-raised);
+  overflow: hidden;
+}
+
+.achievement-item__fill {
+  height: 100%;
+  width: 0;
+  background: var(--gradient-accent);
+  border-radius: var(--radius-sm);
+  transition: width 900ms var(--ease-out);
+}
+
+.achievement-item--unlocked .achievement-item__fill {
+  box-shadow: 0 0 8px var(--color-accent-glow);
+}
+
+.achievement-item--unlocked {
+  position: relative;
+}
+
+.achievement-item--unlocked .achievement-item__badge {
+  box-shadow: 0 0 10px var(--color-accent-glow);
+}
+
+.achievement-item__progress {
+  display: block;
+  margin-top: var(--space-1);
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  color: var(--color-text-faint);
+}
+
+/* Recent activity */
+
+.activity-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.activity-list__item {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding-bottom: var(--space-3);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.activity-list__item:last-child {
+  border-bottom: none;
+  padding-bottom: 0;
+}
+
+.activity-list__dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  background: var(--color-text-faint);
+}
+
+.activity-list__item--pass .activity-list__dot {
+  background: var(--color-accent);
+}
+
+.activity-list__item--fail .activity-list__dot {
+  background: var(--color-warn);
+}
+
+.activity-list__text {
+  flex: 1;
+  font-size: 0.88rem;
+  color: var(--color-text);
+}
+
+.activity-list__time {
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  color: var(--color-text-faint);
+  white-space: nowrap;
+}
+
+/* Performance forecast */
+
+.forecast-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: var(--space-4);
+}
+
+.forecast-cell {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.forecast-cell__label {
+  font-family: var(--font-heading);
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--color-text-dim);
+}
+
+.forecast-cell__value {
+  font-family: var(--font-mono);
+  font-size: 1.3rem;
+  color: var(--color-text);
+}
+
+.forecast-cell__value--accent {
+  color: var(--color-accent);
+}
+
+/* AI feedback engine (Task 1) */
+
+.feedback-panel {
+  margin-top: var(--space-4);
+}
+
+.feedback-panel__header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: var(--space-3);
+}
+
+.feedback-panel__summary {
+  margin: var(--space-2) 0 0;
+  color: var(--color-text-dim);
+  font-size: 0.9rem;
+}
+
+.feedback-panel__section {
+  margin-top: var(--space-4);
+}
+
+.feedback-panel__section-title {
+  margin: 0 0 var(--space-2);
+  font-family: var(--font-heading);
+  font-size: 0.8rem;
+  font-weight: 600;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  color: var(--color-text-faint);
+}
+
+.feedback-panel__list {
+  margin: 0;
+  padding-left: 1.2rem;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  color: var(--color-text);
+  font-size: 0.88rem;
+}
+
+.feedback-panel__activity-hint {
+  color: var(--color-text-dim);
+}
+
+/* Personalized learning plan (Milestone 3 integration) */
+
+.learning-plan-panel {
+  margin-top: var(--space-4);
+}
+
+.learning-plan-panel__note {
+  margin: 0 0 var(--space-3);
+  color: var(--color-text-dim);
+  font-size: 0.9rem;
+}
+
+.learning-plan-panel__summary {
+  margin: 0 0 var(--space-4);
+  color: var(--color-text-dim);
+  font-size: 0.9rem;
+}
+
+.learning-plan-panel__session {
+  margin: 0 0 var(--space-4);
+  padding-left: 1.4rem;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  color: var(--color-text);
+  font-size: 0.9rem;
+}
+
+.learning-plan-panel__letter {
+  font-family: var(--font-mono);
+  font-weight: 600;
+  color: var(--color-accent);
+  margin-right: var(--space-2);
+}
+
+.learning-plan-panel__reason {
+  color: var(--color-text-dim);
+}

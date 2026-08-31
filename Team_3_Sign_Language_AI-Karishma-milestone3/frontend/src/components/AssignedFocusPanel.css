@@ -1,0 +1,146 @@
+.assigned-focus-panel {
+  margin-top: var(--space-4);
+}
+
+.assigned-focus-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.assigned-focus-list__item {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-3);
+  padding-bottom: var(--space-3);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.assigned-focus-list__item:last-child {
+  border-bottom: none;
+  padding-bottom: 0;
+}
+
+.assigned-focus-list__body {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.assigned-focus-list__link {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  text-decoration: none;
+  color: inherit;
+}
+
+.assigned-focus-list__media {
+  max-width: 220px;
+  max-height: 160px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--color-border);
+  object-fit: cover;
+}
+
+.assigned-focus-list__topic-type {
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--color-text-faint);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  padding: 2px 6px;
+}
+
+.assigned-focus-list__topic {
+  font-family: var(--font-mono);
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--color-accent);
+}
+
+.assigned-focus-list__by {
+  font-size: 0.8rem;
+  color: var(--color-text-dim);
+}
+
+.assigned-focus-list__remove {
+  flex-shrink: 0;
+  background: transparent;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  color: var(--color-text-dim);
+  width: 28px;
+  height: 28px;
+  cursor: pointer;
+  transition: color 150ms ease, border-color 150ms ease;
+}
+
+.assigned-focus-list__remove:hover:not(:disabled) {
+  color: var(--color-warn);
+  border-color: var(--color-warn);
+}
+
+.assigned-focus-list__remove:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Assignment creation form */
+
+.assignment-form {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: var(--space-3);
+  margin-top: var(--space-4);
+  padding-top: var(--space-4);
+  border-top: 1px solid var(--color-border);
+}
+
+.assignment-form__field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  font-family: var(--font-heading);
+  font-size: 0.8rem;
+  color: var(--color-text-dim);
+}
+
+.assignment-form__field select {
+  font-family: var(--font-mono);
+  font-size: 0.85rem;
+  color: var(--color-text);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  padding: var(--space-2) var(--space-3);
+  outline: none;
+  min-width: 160px;
+  transition: border-color 150ms ease, box-shadow 150ms ease;
+}
+
+.assignment-form__field select:focus {
+  border-color: var(--color-accent);
+  box-shadow: 0 0 0 3px var(--color-accent-glow);
+}
+
+.assignment-form__field input[type='file'] {
+  font-family: var(--font-mono);
+  font-size: 0.78rem;
+  color: var(--color-text-dim);
+  max-width: 220px;
+}
+
+.assignment-form__submit {
+  padding: var(--space-2) var(--space-4);
+  font-size: 0.85rem;
+}

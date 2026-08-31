@@ -1,0 +1,35 @@
+fastapi==0.140.0
+uvicorn==0.51.0
+SQLAlchemy==2.0.51
+pydantic==2.13.4
+passlib==1.7.4
+bcrypt==4.0.1
+python-jose==3.5.0
+python-multipart==0.0.32
+python-dotenv==1.2.2
+email-validator==2.3.0
+# 0.10.35 (used in the local macOS dev venv) has no linux/arm64 wheel on
+# PyPI — 0.10.18 is the newest 0.10.x release published for that platform,
+# same Tasks API generation as 0.10.35 (the next available version jumps to
+# the 1.0.x line, a larger API-compatibility risk).
+mediapipe==0.10.18
+# opencv-python's 5.x line requires numpy>=2, conflicting with mediapipe's
+# numpy<2 — 4.11.0.86 is the newest 4.x release, compatible with both
+opencv-python==4.11.0.86
+# mediapipe==0.10.18 requires numpy<2 (0.10.35's numpy constraint was
+# relaxed in a later release not published for linux/arm64 — see above)
+numpy==1.26.4
+scikit-learn==1.9.0
+joblib==1.5.3
+matplotlib==3.11.1
+# Pure Python wheel (py3-none-any) — no compiled extension, so no
+# platform-specific wheel risk like mediapipe/opencv above.
+reportlab==5.0.0
+# Added for the word-level temporal sign classifier (prepare_word_dataset.py /
+# train_word_classifier.py): reads the Kaggle ASL-signs landmark parquet files.
+pandas==2.2.3
+pyarrow==18.1.0
+# Only needed to run scripts/test_integration_workflow.py (FastAPI's
+# TestClient requires httpx to drive real HTTP requests against the app
+# in-process) — not used by the running application itself.
+httpx==0.28.1
