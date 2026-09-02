@@ -19,6 +19,13 @@ video. ffmpeg does the precise cut as yt-dlp's postprocessor
 
 Requires yt-dlp and ffmpeg on PATH.
 
+--course selects which curriculum manifest to download (see
+backend/data/curriculum/msasl_curriculum_labels.json for the full list
+— currently "intermediate" and "professional"). Defaults to
+"intermediate" to keep the original one-course invocation working
+unchanged; the Workplace Communication course uses
+--course professional.
+
 IMPORTANT — licence: MS-ASL is distributed under Microsoft's
 Computational Use of Data Agreement (C-UDA 0.1) — research/computational
 use only, no commercial use, no redistribution of clips. See
@@ -27,6 +34,7 @@ data/external/, which is gitignored — never commit them.
 
 Run from backend/:
     venv/bin/python scripts/download_msasl_clips.py
+    venv/bin/python scripts/download_msasl_clips.py --course professional
 """
 
 import argparse
@@ -41,12 +49,7 @@ from pathlib import Path
 BACKEND_ROOT = Path(__file__).resolve().parent.parent
 REPO_ROOT = BACKEND_ROOT.parent
 MANIFEST_DIR = BACKEND_ROOT / "data" / "curriculum" / "manifests"
-COURSE = "intermediate"
 SPLITS = ["train", "val", "test"]
-
-CLIPS_DIR = REPO_ROOT / "data" / "external" / "msasl" / "clips" / COURSE
-OUTPUT_MANIFEST = REPO_ROOT / "data" / "external" / "msasl" / f"{COURSE}_clips_manifest.csv"
-FAILURES_LOG = REPO_ROOT / "data" / "external" / "msasl" / f"{COURSE}_download_failures.txt"
 
 MAX_DOWNLOAD_ATTEMPTS = 3
 # A little padding around the labeled window so ffmpeg's keyframe-aligned
@@ -62,10 +65,10 @@ def check_tools():
         sys.exit(1)
 
 
-def load_manifest_rows() -> list[dict]:
+def load_manifest_rows(course: str) -> list[dict]:
     rows = []
     for split in SPLITS:
-        path = MANIFEST_DIR / f"msasl_{COURSE}_{split}.jsonl"
+        path = MANIFEST_DIR / f"msasl_{course}_{split}.jsonl"
         if not path.exists():
             print(f"WARNING: manifest not found, skipping: {path}")
             continue
@@ -112,18 +115,28 @@ def download_clip_section(url: str, start: float, end: float, out_path: Path) ->
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument(
+        "--course", default="intermediate",
+        help="Which curriculum course to download (see msasl_curriculum_labels.json). "
+             "Default: intermediate. Use 'professional' for Workplace Communication.",
+    )
+    parser.add_argument(
         "--limit", type=int, default=None,
         help="Only download the first N manifest rows — useful for measuring real disk/bandwidth "
              "usage on a small sample before committing to the full run.",
     )
     args = parser.parse_args()
+    course = args.course
+
+    clips_dir = REPO_ROOT / "data" / "external" / "msasl" / "clips" / course
+    output_manifest = REPO_ROOT / "data" / "external" / "msasl" / f"{course}_clips_manifest.csv"
+    failures_log = REPO_ROOT / "data" / "external" / "msasl" / f"{course}_download_failures.txt"
 
     check_tools()
-    rows = load_manifest_rows()
+    rows = load_manifest_rows(course)
     if args.limit:
         rows = rows[: args.limit]
     print(
-        f"Loaded {len(rows)} manifest rows across {SPLITS} for course={COURSE}"
+        f"Loaded {len(rows)} manifest rows across {SPLITS} for course={course}"
         + (f" (limited to {args.limit})" if args.limit else ""),
         flush=True,
     )
@@ -135,11 +148,11 @@ def main():
     # prints that don't, unless we flush explicitly, which is what caused
     # a previous run to leave 47 real downloaded clips with a 0-byte
     # manifest and no visible progress in its log.
-    OUTPUT_MANIFEST.parent.mkdir(parents=True, exist_ok=True)
+    output_manifest.parent.mkdir(parents=True, exist_ok=True)
     already_logged: set[str] = set()
-    manifest_is_new = not OUTPUT_MANIFEST.exists() or OUTPUT_MANIFEST.stat().st_size == 0
+    manifest_is_new = not output_manifest.exists() or output_manifest.stat().st_size == 0
     if not manifest_is_new:
-        with open(OUTPUT_MANIFEST, newline="") as f:
+        with open(output_manifest, newline="") as f:
             for existing_row in csv.DictReader(f):
                 already_logged.add(existing_row["clip_id"])
         print(f"Resuming: {len(already_logged)} clips already logged in an existing manifest", flush=True)
@@ -148,7 +161,7 @@ def main():
     failures = []
     per_split_counts = {s: 0 for s in SPLITS}
 
-    manifest_file = open(OUTPUT_MANIFEST, "a", newline="")
+    manifest_file = open(output_manifest, "a", newline="")
     writer = csv.writer(manifest_file)
     if manifest_is_new:
         writer.writerow(["clip_id", "gloss", "split", "signer_id", "local_path"])
@@ -156,12 +169,12 @@ def main():
 
     try:
         for i, row in enumerate(rows, start=1):
-            clip_id = f"{COURSE}_{row['split']}_{i:04d}"
+            clip_id = f"{course}_{row['split']}_{i:04d}"
             if clip_id in already_logged:
                 per_split_counts[row["split"]] += 1
                 continue
 
-            out_path = CLIPS_DIR / row["split"] / f"{clip_id}.mp4"
+            out_path = clips_dir / row["split"] / f"{clip_id}.mp4"
 
             if not out_path.exists():
                 ok = download_clip_section(row["url"], row["start_time"], row["end_time"], out_path)
@@ -183,7 +196,7 @@ def main():
         manifest_file.close()
 
     if failures:
-        with open(FAILURES_LOG, "w") as f:
+        with open(failures_log, "w") as f:
             for clip_id, gloss, reason in failures:
                 f.write(f"{clip_id}\t{gloss}\t{reason}\n")
 
@@ -193,8 +206,8 @@ def main():
     print(f"Failed this run: {len(failures)}", flush=True)
     print(f"Per-split counts: {per_split_counts}", flush=True)
     if failures:
-        print(f"Failure details logged to: {FAILURES_LOG}", flush=True)
-    print(f"Saved clip manifest to: {OUTPUT_MANIFEST}", flush=True)
+        print(f"Failure details logged to: {failures_log}", flush=True)
+    print(f"Saved clip manifest to: {output_manifest}", flush=True)
 
 
 if __name__ == "__main__":

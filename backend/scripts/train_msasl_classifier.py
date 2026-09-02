@@ -26,10 +26,19 @@ count was. So this script:
      (never by test), then reports test accuracy once, on the untouched
      real test split, with that chosen config refit on train+val.
 
+--course selects which prepared feature CSV to train on (matches
+prepare_msasl_dataset.py's --course) — defaults to "intermediate" so
+the original one-course invocation still works unchanged. The model
+file, confusion matrix, and vocabulary_source metadata are all named
+after the chosen course, so intermediate and professional models never
+collide on disk.
+
 Run from backend/:
     python3 scripts/train_msasl_classifier.py
+    python3 scripts/train_msasl_classifier.py --course professional
 """
 
+import argparse
 import csv
 from pathlib import Path
 
@@ -58,18 +67,14 @@ from app.services.word_landmark_features import (
 )
 
 BACKEND_ROOT = Path(__file__).resolve().parent.parent
-COURSE = "intermediate"
-FEATURES_CSV = BACKEND_ROOT / "data" / "processed" / f"msasl_{COURSE}_landmarks.csv"
-MODEL_PATH = BACKEND_ROOT / "data" / "models" / f"msasl_{COURSE}_classifier.pkl"
-CONFUSION_MATRIX_PNG = BACKEND_ROOT / "data" / "processed" / f"msasl_{COURSE}_confusion_matrix.png"
 
 RANDOM_SEED = 42
 MIN_SAMPLES_PER_CLASS = 15
 POINTS_PER_FRAME = len(POSE_ORDER) + HAND_LANDMARK_COUNT * 2
 
 
-def load_dataset():
-    with open(FEATURES_CSV, newline="") as f:
+def load_dataset(features_csv: Path):
+    with open(features_csv, newline="") as f:
         reader = csv.reader(f)
         next(reader)
         rows = list(reader)
@@ -81,10 +86,23 @@ def load_dataset():
 
 
 def main():
-    if not FEATURES_CSV.exists():
-        raise FileNotFoundError(f"Feature CSV not found: {FEATURES_CSV}. Run prepare_msasl_dataset.py first.")
+    parser = argparse.ArgumentParser()
+    parser.add_argument(
+        "--course", default="intermediate",
+        help="Which prepared feature CSV to train on (matches prepare_msasl_dataset.py's --course). "
+             "Default: intermediate. Use 'professional' for Workplace Communication.",
+    )
+    args = parser.parse_args()
+    course = args.course
 
-    seqs, labels, splits = load_dataset()
+    features_csv = BACKEND_ROOT / "data" / "processed" / f"msasl_{course}_landmarks.csv"
+    model_path = BACKEND_ROOT / "data" / "models" / f"msasl_{course}_classifier.pkl"
+    confusion_matrix_png = BACKEND_ROOT / "data" / "processed" / f"msasl_{course}_confusion_matrix.png"
+
+    if not features_csv.exists():
+        raise FileNotFoundError(f"Feature CSV not found: {features_csv}. Run prepare_msasl_dataset.py first.")
+
+    seqs, labels, splits = load_dataset(features_csv)
     all_classes = sorted(set(labels))
     print(f"Loaded {len(labels)} real samples across {len(all_classes)} words")
 
@@ -164,7 +182,7 @@ def main():
     for label, row in zip(classes, cm):
         print(f"{label[:10]:>10} " + " ".join(f"{v:>9}" for v in row))
 
-    MODEL_PATH.parent.mkdir(parents=True, exist_ok=True)
+    model_path.parent.mkdir(parents=True, exist_ok=True)
     joblib.dump(
         {
             "model": final_model,
@@ -172,15 +190,15 @@ def main():
             "model_name": best_cname,
             "feature_set": best_fname,
             "fixed_frames": FIXED_FRAMES,
-            "vocabulary_source": f"MS-ASL {COURSE} curriculum (C-UDA 0.1 licensed, research/computational use only)",
+            "vocabulary_source": f"MS-ASL {course} curriculum (C-UDA 0.1 licensed, research/computational use only)",
             "test_accuracy": test_acc,
             "min_samples_per_class": MIN_SAMPLES_PER_CLASS,
             "dropped_for_insufficient_data": dropped,
             "trained_with_augmentation": best_tname == "with_aug",
         },
-        MODEL_PATH,
+        model_path,
     )
-    print(f"\nSaved model to: {MODEL_PATH}")
+    print(f"\nSaved model to: {model_path}")
 
     fig, ax = plt.subplots(figsize=(9, 9))
     ConfusionMatrixDisplay(confusion_matrix=cm, display_labels=classes).plot(
@@ -188,8 +206,8 @@ def main():
     )
     ax.set_title(f"{best_cname} test-split confusion matrix (accuracy {test_acc:.2%}, {len(classes)} words)")
     fig.tight_layout()
-    fig.savefig(CONFUSION_MATRIX_PNG, dpi=150)
-    print(f"Saved confusion matrix plot to: {CONFUSION_MATRIX_PNG}")
+    fig.savefig(confusion_matrix_png, dpi=150)
+    print(f"Saved confusion matrix plot to: {confusion_matrix_png}")
 
 
 if __name__ == "__main__":
