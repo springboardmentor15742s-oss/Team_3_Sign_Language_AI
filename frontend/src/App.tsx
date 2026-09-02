@@ -6,18 +6,15 @@ import { ADMIN_ROLES, INSTRUCTOR_ROLES } from './auth/roles';
 import { Landing } from './pages/Landing';
 import { Login } from './pages/Login';
 import { Dashboard } from './pages/Dashboard';
+import { AnalyticsReports } from './pages/AnalyticsReports';
 import { Practice } from './pages/Practice';
 import { CommonSigns } from './pages/CommonSigns';
 import { MotionSigns } from './pages/MotionSigns';
-import { ConversationalFluency } from './pages/ConversationalFluency';
 import { Courses } from './pages/Courses';
+import { ConversationalFluency } from './pages/ConversationalFluency';
 import { Instructor } from './pages/Instructor';
 import { InstructorLearnerDetail } from './pages/InstructorLearnerDetail';
 import { Admin } from './pages/Admin';
-import { SpeedQuiz } from './pages/SpeedQuiz';
-import { AnalyticsReports } from './pages/AnalyticsReports';
-import { PracticeHistory } from './pages/PracticeHistory';
-import { Profile } from './pages/Profile';
 
 function App() {
   return (
@@ -48,6 +45,14 @@ function App() {
             }
           />
           <Route
+            path="/analytics-reports"
+            element={
+              <ProtectedRoute deniedRoles={INSTRUCTOR_ROLES} redirectTo="/instructor">
+                <AnalyticsReports />
+              </ProtectedRoute>
+            }
+          />
+          <Route
             path="/common-signs"
             element={
               <ProtectedRoute deniedRoles={INSTRUCTOR_ROLES} redirectTo="/instructor">
@@ -71,11 +76,18 @@ function App() {
               </ProtectedRoute>
             }
           />
-          <Route path="/speed-quiz" element={<ProtectedRoute><SpeedQuiz /></ProtectedRoute>} />
-          <Route path="/analytics-reports" element={<ProtectedRoute deniedRoles={INSTRUCTOR_ROLES} redirectTo="/instructor"><AnalyticsReports /></ProtectedRoute>} />
-          <Route path="/practice-history" element={<ProtectedRoute deniedRoles={INSTRUCTOR_ROLES} redirectTo="/instructor"><PracticeHistory /></ProtectedRoute>} />
-          <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
-          <Route path="/conversational-fluency" element={<ProtectedRoute deniedRoles={INSTRUCTOR_ROLES} redirectTo="/instructor"><ConversationalFluency /></ProtectedRoute>} />
+          {/* Also wasn't wired up — ConversationalFluency.tsx (the
+              16-word MS-ASL course) existed and was linked from the
+              Landing page's course catalog and from assignment links,
+              but had no route, so every link to it bounced to "/". */}
+          <Route
+            path="/conversational-fluency"
+            element={
+              <ProtectedRoute deniedRoles={INSTRUCTOR_ROLES} redirectTo="/instructor">
+                <ConversationalFluency />
+              </ProtectedRoute>
+            }
+          />
           <Route
             path="/instructor"
             element={
@@ -84,6 +96,10 @@ function App() {
               </ProtectedRoute>
             }
           />
+          {/* Wasn't wired up until now — InstructorLearnerDetail.tsx
+              (the roster drill-down: weak areas, assignments, reference
+              media, notes) existed but had no route pointing at it, so a
+              roster row had nowhere to link to. */}
           <Route
             path="/instructor/learners/:learnerId"
             element={

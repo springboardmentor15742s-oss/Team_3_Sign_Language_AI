@@ -118,6 +118,7 @@ export function Landing() {
   // data instead.
   const [commonSigns, setCommonSigns] = useState<string[] | null>(null);
   const [motionSigns, setMotionSigns] = useState<string[] | null>(null);
+  const [wordSigns, setWordSigns] = useState<string[] | null>(null);
 
   useEffect(() => {
     client
@@ -133,6 +134,13 @@ export function Landing() {
       .catch((err) => {
         console.error('Failed to load supported motion signs:', err);
         setMotionSigns([]);
+      });
+    client
+      .get<{ words: string[] }>('/api/word-signs/supported')
+      .then((res) => setWordSigns(res.data.words))
+      .catch((err) => {
+        console.error('Failed to load supported word signs:', err);
+        setWordSigns([]);
       });
   }, []);
 
@@ -169,10 +177,19 @@ export function Landing() {
       route: '/motion-signs',
     },
     {
-      eyebrow: 'Intermediate & Professional Sign Language',
-      title: 'Conversational Fluency & Workplace Communication',
+      eyebrow: 'Intermediate Sign Language · Real, trained model',
+      title: 'Conversational Fluency',
       description:
-        'Full-word and motion-based conversational signing, plus workplace-specific vocabulary. Both need a real downloaded video-sign dataset and a trained temporal model for the full ASL vocabulary — not built yet.',
+        'Full-word conversational signing, recognized by a classifier trained on real MS-ASL video clips — a smaller, more reliable vocabulary rather than a shakier full 30-word set.',
+      status: 'built',
+      meta: wordSigns === null ? 'Loading…' : wordSigns.length > 0 ? `${wordSigns.length} words, real accuracy tracking` : 'None available',
+      route: '/conversational-fluency',
+    },
+    {
+      eyebrow: 'Professional Communication',
+      title: 'Workplace Communication',
+      description:
+        'Workplace-specific vocabulary and phrases, beyond general conversational signing. Needs its own downloaded video-sign dataset and a trained temporal model for this vocabulary tier — not built yet.',
       status: 'locked',
       meta: 'Not yet available',
       route: null,
