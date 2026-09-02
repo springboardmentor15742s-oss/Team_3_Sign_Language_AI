@@ -2,11 +2,17 @@ import React, { useMemo, useRef, useState } from 'react';
 import { AssignmentTopicType } from '../types/instructorAssignment';
 import './AssignedFocusPanel.css';
 
+export interface AssignmentFormFields {
+  notes: string | null;
+  dueDate: string | null;
+  referenceMedia: File | null;
+}
+
 interface AssignmentFormProps {
   letters: string[];
   motionSigns: string[];
   wordSigns: string[];
-  onCreate: (topic: string, topicType: AssignmentTopicType, referenceMedia: File | null) => Promise<void>;
+  onCreate: (topic: string, topicType: AssignmentTopicType, fields: AssignmentFormFields) => Promise<void>;
 }
 
 const TOPIC_TYPE_LABELS: Record<AssignmentTopicType, string> = {
@@ -22,6 +28,8 @@ const MAX_MEDIA_BYTES = 20 * 1024 * 1024;
 
 export function AssignmentForm({ letters, motionSigns, wordSigns, onCreate }: AssignmentFormProps) {
   const [topicType, setTopicType] = useState<AssignmentTopicType>('letter');
+  const [notes, setNotes] = useState('');
+  const [dueDate, setDueDate] = useState('');
   const [referenceMedia, setReferenceMedia] = useState<File | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -58,7 +66,13 @@ export function AssignmentForm({ letters, motionSigns, wordSigns, onCreate }: As
     setSubmitting(true);
     setError(null);
     try {
-      await onCreate(topic, topicType, referenceMedia);
+      await onCreate(topic, topicType, {
+        notes: notes.trim() ? notes.trim() : null,
+        dueDate: dueDate || null,
+        referenceMedia,
+      });
+      setNotes('');
+      setDueDate('');
       setReferenceMedia(null);
       if (fileInputRef.current) fileInputRef.current.value = '';
     } catch (err) {
@@ -92,6 +106,21 @@ export function AssignmentForm({ letters, motionSigns, wordSigns, onCreate }: As
             </option>
           ))}
         </select>
+      </label>
+
+      <label className="assignment-form__field assignment-form__field--wide">
+        Notes / instructions (optional)
+        <textarea
+          value={notes}
+          onChange={(e) => setNotes(e.target.value)}
+          placeholder="e.g. focus on hand orientation, not speed"
+          rows={2}
+        />
+      </label>
+
+      <label className="assignment-form__field">
+        Due date (optional)
+        <input type="date" value={dueDate} onChange={(e) => setDueDate(e.target.value)} />
       </label>
 
       <label className="assignment-form__field">

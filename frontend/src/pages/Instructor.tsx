@@ -1,9 +1,16 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import client from '../api/client';
+import { BulkAssignPanel } from '../components/BulkAssignPanel';
+import { AssignmentFormFields } from '../components/AssignmentForm';
+import { ClassOverviewPanel } from '../components/ClassOverviewPanel';
 import '../components/DataTable.css';
 import { Topbar } from '../components/Topbar';
-import { LearnerRosterEntry, LearnerRosterResponse } from '../types/instructor';
+import { ClassAnalytics, LearnerRosterEntry, LearnerRosterResponse } from '../types/instructor';
+import { AssignmentListResponse, AssignmentTopicType } from '../types/instructorAssignment';
+import { SupportedMotionSigns } from '../types/motionSigns';
+import { SupportedLettersResponse } from '../types/practice';
+import { SupportedWordSigns } from '../types/wordSigns';
 import './Instructor.css';
 
 const WEAK_ACCURACY_THRESHOLD = 70;
@@ -24,6 +31,10 @@ function sortByAccuracyAscending(learners: LearnerRosterEntry[]): LearnerRosterE
 
 export function Instructor() {
   const [learners, setLearners] = useState<LearnerRosterEntry[] | null>(null);
+  const [classAnalytics, setClassAnalytics] = useState<ClassAnalytics | null>(null);
+  const [letters, setLetters] = useState<string[]>([]);
+  const [motionSigns, setMotionSigns] = useState<string[]>([]);
+  const [wordSigns, setWordSigns] = useState<string[]>([]);
   const [loadError, setLoadError] = useState<string | null>(null);
   // Per-row state, keyed by learner_id — several instructors could in
   // principle click different rows in quick succession, so a single
@@ -31,12 +42,26 @@ export function Instructor() {
   // its one learner) isn't enough here.
   const [downloadingIds, setDownloadingIds] = useState<Set<string>>(new Set());
   const [downloadErrors, setDownloadErrors] = useState<Record<string, string>>({});
+  const [removingIds, setRemovingIds] = useState<Set<string>>(new Set());
+  const [newLearnerEmail, setNewLearnerEmail] = useState('');
+  const [addingLearner, setAddingLearner] = useState(false);
+  const [addLearnerError, setAddLearnerError] = useState<string | null>(null);
 
   const loadRoster = useCallback(async () => {
     setLoadError(null);
     try {
-      const response = await client.get<LearnerRosterResponse>('/api/instructor/learners');
-      setLearners(sortByAccuracyAscending(response.data.learners));
+      const [rosterRes, analyticsRes, lettersRes, motionSignsRes, wordSignsRes] = await Promise.all([
+        client.get<LearnerRosterResponse>('/api/instructor/learners'),
+        client.get<ClassAnalytics>('/api/instructor/class-analytics'),
+        client.get<SupportedLettersResponse>('/api/practice/supported-letters'),
+        client.get<SupportedMotionSigns>('/api/motion-signs/supported'),
+        client.get<SupportedWordSigns>('/api/word-signs/supported'),
+      ]);
+      setLearners(sortByAccuracyAscending(rosterRes.data.learners));
+      setClassAnalytics(analyticsRes.data);
+      setLetters(lettersRes.data.letters);
+      setMotionSigns(motionSignsRes.data.signs);
+      setWordSigns(wordSignsRes.data.words);
     } catch (err) {
       console.error('Failed to load learner roster:', err);
       setLoadError('Could not load the learner roster.');
@@ -46,6 +71,63 @@ export function Instructor() {
   useEffect(() => {
     loadRoster();
   }, [loadRoster]);
+
+  const handleAddLearner = useCallback(async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newLearnerEmail.trim()) return;
+    setAddingLearner(true);
+    setAddLearnerError(null);
+    try {
+      const response = await client.post<LearnerRosterResponse>('/api/instructor/learners', {
+        learner_email: newLearnerEmail.trim(),
+      });
+      setLearners(sortByAccuracyAscending(response.data.learners));
+      setNewLearnerEmail('');
+      // The roster changed, so the class-wide numbers above it need a refresh too.
+      const analyticsRes = await client.get<ClassAnalytics>('/api/instructor/class-analytics');
+      setClassAnalytics(analyticsRes.data);
+    } catch (err) {
+      console.error('Failed to add learner to roster:', err);
+      setAddLearnerError('Could not find a learner with that email.');
+    } finally {
+      setAddingLearner(false);
+    }
+  }, [newLearnerEmail]);
+
+  const handleRemoveLearner = useCallback(async (learnerId: string) => {
+    setRemovingIds((current) => new Set(current).add(learnerId));
+    try {
+      await client.delete(`/api/instructor/learners/${learnerId}`);
+      setLearners((current) => (current ? current.filter((l) => l.learner_id !== learnerId) : current));
+      const analyticsRes = await client.get<ClassAnalytics>('/api/instructor/class-analytics');
+      setClassAnalytics(analyticsRes.data);
+    } catch (err) {
+      console.error('Failed to remove learner from roster:', err);
+    } finally {
+      setRemovingIds((current) => {
+        const next = new Set(current);
+        next.delete(learnerId);
+        return next;
+      });
+    }
+  }, []);
+
+  const handleBulkAssign = useCallback(
+    async (learnerIds: string[], topic: string, topicType: AssignmentTopicType, fields: AssignmentFormFields) => {
+      const formData = new FormData();
+      learnerIds.forEach((id) => formData.append('learner_ids', id));
+      formData.append('topic', topic);
+      formData.append('topic_type', topicType);
+      if (fields.notes) formData.append('notes', fields.notes);
+      if (fields.dueDate) formData.append('due_date', fields.dueDate);
+      if (fields.referenceMedia) formData.append('reference_media', fields.referenceMedia);
+      await client.post<AssignmentListResponse>('/api/instructor/assignments', formData);
+      // Assignment counts changed; refresh the class overview numbers.
+      const analyticsRes = await client.get<ClassAnalytics>('/api/instructor/class-analytics');
+      setClassAnalytics(analyticsRes.data);
+    },
+    []
+  );
 
   const handleDownloadReport = useCallback(async (learnerId: string) => {
     setDownloadingIds((current) => new Set(current).add(learnerId));
@@ -88,7 +170,25 @@ export function Instructor() {
     <div className="page instructor">
       <Topbar title="Instructor Dashboard" />
 
+      {classAnalytics && <ClassOverviewPanel analytics={classAnalytics} />}
+
       <section className="roster-section">
+        <form className="roster-section__add-learner" onSubmit={handleAddLearner}>
+          <label className="roster-section__add-learner-field">
+            Add a learner to your roster
+            <input
+              type="email"
+              value={newLearnerEmail}
+              onChange={(e) => setNewLearnerEmail(e.target.value)}
+              placeholder="learner@example.com"
+            />
+          </label>
+          <button type="submit" className="btn roster-section__add-learner-btn" disabled={addingLearner || !newLearnerEmail.trim()}>
+            {addingLearner ? 'Adding…' : 'Add learner'}
+          </button>
+        </form>
+        {addLearnerError && <p className="status-message status-message--error">{addLearnerError}</p>}
+
         <p className="roster-section__caption">
           Sorted by accuracy, lowest first — learners who need attention are at the top. Learners
           who haven&rsquo;t attempted anything yet are listed at the bottom.
@@ -103,7 +203,7 @@ export function Instructor() {
         )}
 
         {!loadError && learners !== null && learners.length === 0 && (
-          <p className="status-message">No learners yet.</p>
+          <p className="status-message">No learners on your roster yet — add one by email above.</p>
         )}
 
         {!loadError && learners !== null && learners.length > 0 && (
@@ -118,6 +218,7 @@ export function Instructor() {
                   <th>Letters scored</th>
                   <th>Weak areas</th>
                   <th>Report</th>
+                  <th>Roster</th>
                 </tr>
               </thead>
               <tbody>
@@ -127,13 +228,12 @@ export function Instructor() {
                     learner.overall_accuracy_percent < WEAK_ACCURACY_THRESHOLD;
                   const isDownloading = downloadingIds.has(learner.learner_id);
                   const downloadError = downloadErrors[learner.learner_id];
+                  const isRemoving = removingIds.has(learner.learner_id);
 
                   return (
                     <tr key={learner.learner_id}>
                       <td>
-                        <Link to={`/instructor/learners/${learner.learner_id}`} className="roster-section__learner-link">
-                          {learner.name}
-                        </Link>
+                        <Link to={`/instructor/learners/${learner.learner_id}`}>{learner.name}</Link>
                       </td>
                       <td>{learner.email}</td>
                       <td className="data-table__numeric">{learner.total_attempts}</td>
@@ -167,6 +267,17 @@ export function Instructor() {
                           </p>
                         )}
                       </td>
+                      <td className="data-table__numeric">
+                        <button
+                          type="button"
+                          className="btn btn--ghost roster-section__remove-btn"
+                          onClick={() => handleRemoveLearner(learner.learner_id)}
+                          disabled={isRemoving}
+                          aria-label={`Remove ${learner.name} from your roster`}
+                        >
+                          {isRemoving ? '…' : 'Remove'}
+                        </button>
+                      </td>
                     </tr>
                   );
                 })}
@@ -175,6 +286,10 @@ export function Instructor() {
           </div>
         )}
       </section>
+
+      {learners && learners.length > 0 && (
+        <BulkAssignPanel learners={learners} letters={letters} motionSigns={motionSigns} wordSigns={wordSigns} onAssign={handleBulkAssign} />
+      )}
     </div>
   );
 }

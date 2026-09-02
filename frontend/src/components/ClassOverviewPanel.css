@@ -1,0 +1,49 @@
+.class-overview-panel {
+  margin-bottom: var(--space-4);
+}
+
+.class-overview-panel__weak-letters {
+  margin-top: var(--space-5);
+  padding-top: var(--space-4);
+  border-top: 1px solid var(--color-border);
+}
+
+.class-overview-panel__subtitle {
+  margin: 0 0 var(--space-3);
+  font-family: var(--font-heading);
+  font-size: 0.78rem;
+  font-weight: 600;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  color: var(--color-text-faint);
+}
+
+.class-overview-panel__letters {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+}
+
+.class-overview-panel__letter {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+}
+
+.class-overview-panel__letter-value {
+  font-family: var(--font-mono);
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--color-warn);
+}
+
+.class-overview-panel__letter-count {
+  font-size: 0.75rem;
+  color: var(--color-text-dim);
+}

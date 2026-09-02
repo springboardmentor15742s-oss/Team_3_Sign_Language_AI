@@ -24,6 +24,10 @@
   padding-bottom: 0;
 }
 
+.assigned-focus-list__item--completed {
+  opacity: 0.6;
+}
+
 .assigned-focus-list__body {
   flex: 1;
   min-width: 0;
@@ -47,6 +51,54 @@
   border-radius: var(--radius-sm);
   border: 1px solid var(--color-border);
   object-fit: cover;
+}
+
+.assigned-focus-list__badge {
+  font-family: var(--font-mono);
+  font-size: 0.68rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  border-radius: var(--radius-sm);
+  padding: 2px 6px;
+}
+
+.assigned-focus-list__badge--done {
+  color: var(--color-accent);
+  border: 1px solid var(--color-accent-dim);
+}
+
+.assigned-focus-list__badge--overdue {
+  color: var(--color-warn);
+  border: 1px solid var(--color-warn);
+}
+
+.assigned-focus-list__notes {
+  margin: 0;
+  font-size: 0.85rem;
+  color: var(--color-text-dim);
+  white-space: pre-wrap;
+}
+
+.assigned-focus-list__due {
+  margin: 0;
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  color: var(--color-text-faint);
+}
+
+.assigned-focus-list__complete {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-family: var(--font-heading);
+  font-size: 0.8rem;
+  color: var(--color-text-dim);
+  cursor: pointer;
+  width: fit-content;
+}
+
+.assigned-focus-list__complete input {
+  cursor: pointer;
 }
 
 .assigned-focus-list__topic-type {
@@ -138,6 +190,45 @@
   font-size: 0.78rem;
   color: var(--color-text-dim);
   max-width: 220px;
+}
+
+.assignment-form__field--wide {
+  flex-basis: 100%;
+}
+
+.assignment-form__field textarea {
+  font-family: var(--font-body, inherit);
+  font-size: 0.85rem;
+  color: var(--color-text);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  padding: var(--space-2) var(--space-3);
+  outline: none;
+  resize: vertical;
+  min-height: 2.4em;
+  transition: border-color 150ms ease, box-shadow 150ms ease;
+}
+
+.assignment-form__field textarea:focus {
+  border-color: var(--color-accent);
+  box-shadow: 0 0 0 3px var(--color-accent-glow);
+}
+
+.assignment-form__field input[type='date'] {
+  font-family: var(--font-mono);
+  font-size: 0.85rem;
+  color: var(--color-text);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  padding: var(--space-2) var(--space-3);
+  outline: none;
+}
+
+.assignment-form__field input[type='date']:focus {
+  border-color: var(--color-accent);
+  box-shadow: 0 0 0 3px var(--color-accent-glow);
 }
 
 .assignment-form__submit {

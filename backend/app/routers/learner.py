@@ -1,6 +1,6 @@
 from typing import Optional
 
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 
 from app.database import get_db
@@ -11,7 +11,7 @@ from app.schemas.confusion import ConfusionPairsResponse
 from app.schemas.courses import CourseCatalogResponse
 from app.schemas.feedback import LearnerFeedbackResponse
 from app.schemas.history import PracticeHistoryResponse
-from app.schemas.instructor_assignment import AssignmentListResponse
+from app.schemas.instructor_assignment import AssignmentCompleteRequest, AssignmentListResponse, AssignmentResponse
 from app.schemas.learning_analytics_workflow import LearningAnalyticsWorkflowResponse
 from app.schemas.learning_plan import LearningPlanResponse
 from app.schemas.progress import LearnerProgressResponse
@@ -21,7 +21,7 @@ from app.services.history_service import get_practice_history
 from app.services.auth_dependency import require_self_or_staff
 from app.services.confusion_service import get_confusion_pairs
 from app.services.course_catalog_service import get_course_catalog
-from app.services.instructor_assignment_service import list_assignments_for_learner
+from app.services.instructor_assignment_service import list_assignments_for_learner, set_assignment_completed
 from app.services.learning_analytics_service import get_learner_analytics
 from app.services.learning_analytics_workflow_service import get_learning_analytics_workflow
 from app.services.adaptive_learning_service import get_adaptive_learning_plan
@@ -140,3 +140,23 @@ def get_learner_assignments(
     A second, clearly-labeled source shown alongside the auto-generated
     recommendations — not blended into them."""
     return {"assignments": list_assignments_for_learner(db, learner_id)}
+
+
+@router.patch("/{learner_id}/assignments/{assignment_id}/complete", response_model=AssignmentResponse)
+def set_learner_assignment_completed(
+    learner_id: str,
+    assignment_id: str,
+    payload: AssignmentCompleteRequest,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_self_or_staff),
+):
+    """The learner (or staff, via require_self_or_staff) marks their own
+    assignment done/not-done. Scoped to assignment_id + learner_id
+    together in the service layer, so this can never touch a different
+    learner's row even if someone guesses an assignment id. Deletion by
+    the instructor remains the only way an assignment disappears —
+    completing it is a separate, non-destructive signal."""
+    result = set_assignment_completed(db, assignment_id, learner_id, payload.completed)
+    if result is None:
+        raise HTTPException(status_code=404, detail="Assignment not found.")
+    return AssignmentResponse(**result)

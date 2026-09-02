@@ -11,6 +11,8 @@ from app.models import motion_sign_attempt
 from app.models import learning_activity
 from app.models import word_sign_attempt
 from app.models import instructor_assignment
+from app.models import instructor_learner
+from app.models import instructor_note
 
 Base.metadata.create_all(bind=engine)
 

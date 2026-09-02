@@ -29,6 +29,7 @@ export function Dashboard() {
   const [feedback, setFeedback] = useState<LearnerFeedback | null>(null);
   const [learningPlan, setLearningPlan] = useState<LearningPlan | null>(null);
   const [assignments, setAssignments] = useState<Assignment[]>([]);
+  const [completingAssignmentId, setCompletingAssignmentId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [downloadingReport, setDownloadingReport] = useState(false);
@@ -70,6 +71,25 @@ export function Dashboard() {
   useEffect(() => {
     loadDashboardData();
   }, [loadDashboardData]);
+
+  const handleCompleteAssignment = useCallback(
+    async (assignmentId: string, completed: boolean) => {
+      if (!user) return;
+      setCompletingAssignmentId(assignmentId);
+      try {
+        const response = await client.patch<Assignment>(
+          `/api/learner/${user.id}/assignments/${assignmentId}/complete`,
+          { completed }
+        );
+        setAssignments((current) => current.map((a) => (a.id === assignmentId ? response.data : a)));
+      } catch (err) {
+        console.error('Failed to update assignment completion:', err);
+      } finally {
+        setCompletingAssignmentId(null);
+      }
+    },
+    [user]
+  );
 
   const handleDownloadReport = useCallback(async () => {
     if (!user) return;
@@ -188,7 +208,13 @@ export function Dashboard() {
         <ConfusionPanel pairs={confusionPairs} />
       </section>
 
-      {assignments.length > 0 && <AssignedFocusPanel assignments={assignments} />}
+      {assignments.length > 0 && (
+        <AssignedFocusPanel
+          assignments={assignments}
+          onComplete={handleCompleteAssignment}
+          completingId={completingAssignmentId}
+        />
+      )}
 
       {adaptivePlan && <AdaptiveLearningPanel plan={adaptivePlan} />}
       {feedback && <FeedbackPanel feedback={feedback} />}

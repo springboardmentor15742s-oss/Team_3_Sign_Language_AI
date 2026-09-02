@@ -10,6 +10,10 @@ class HandLandmarkPoint(BaseModel):
     z: float
 
 
+class SupportedLettersResponse(BaseModel):
+    letters: list[str]
+
+
 class PracticeFeedbackResponse(BaseModel):
     # Null when status is no_attempt_detected — that outcome is not logged
     # as a PracticeAttempt, so there's no row to reference.

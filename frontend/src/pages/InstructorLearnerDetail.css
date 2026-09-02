@@ -18,3 +18,14 @@
   font-size: 0.8rem;
   color: var(--color-text-dim);
 }
+
+.instructor-learner-detail__not-on-roster {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  flex-wrap: wrap;
+}
+
+.instructor-learner-detail__not-on-roster .status-message {
+  margin: 0;
+}

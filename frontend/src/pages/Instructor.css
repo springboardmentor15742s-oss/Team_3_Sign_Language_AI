@@ -23,14 +23,51 @@
   max-width: 140px;
 }
 
-.roster-section__learner-link {
-  color: var(--color-text);
-  text-decoration: none;
-  font-weight: 600;
-  transition: color 150ms ease;
+.roster-section__remove-btn {
+  padding: var(--space-1) var(--space-3);
+  font-size: 0.75rem;
+  color: var(--color-text-dim);
 }
 
-.roster-section__learner-link:hover {
-  color: var(--color-accent);
-  text-decoration: underline;
+.roster-section__remove-btn:hover:not(:disabled) {
+  color: var(--color-warn);
+}
+
+.roster-section__add-learner {
+  display: flex;
+  align-items: flex-end;
+  gap: var(--space-3);
+  flex-wrap: wrap;
+}
+
+.roster-section__add-learner-field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  font-family: var(--font-heading);
+  font-size: 0.8rem;
+  color: var(--color-text-dim);
+}
+
+.roster-section__add-learner-field input {
+  font-family: var(--font-mono);
+  font-size: 0.85rem;
+  color: var(--color-text);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  padding: var(--space-2) var(--space-3);
+  outline: none;
+  min-width: 240px;
+  transition: border-color 150ms ease, box-shadow 150ms ease;
+}
+
+.roster-section__add-learner-field input:focus {
+  border-color: var(--color-accent);
+  box-shadow: 0 0 0 3px var(--color-accent-glow);
+}
+
+.roster-section__add-learner-btn {
+  padding: var(--space-2) var(--space-4);
+  font-size: 0.85rem;
 }

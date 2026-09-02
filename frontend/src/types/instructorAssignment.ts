@@ -11,6 +11,10 @@ export interface Assignment {
   instructor_name: string | null;
   topic: string;
   topic_type: AssignmentTopicType;
+  notes: string | null;
+  due_date: string | null; // "YYYY-MM-DD"
+  completed: boolean;
+  completed_at: string | null;
   // Set only when the instructor attached a reference photo/video —
   // reference_media_url is a ready-to-fetch /media/... path.
   reference_media_url: string | null;

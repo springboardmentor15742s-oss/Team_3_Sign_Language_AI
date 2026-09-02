@@ -5,16 +5,27 @@ from sqlalchemy.orm import Session
 
 from app.database import get_db
 from app.models.user import User
-from app.schemas.practice import PracticeFeedbackResponse
+from app.schemas.practice import PracticeFeedbackResponse, SupportedLettersResponse
 from app.services.adaptive_learning_service import get_adaptive_learning_plan
 from app.services.ai_feedback_service import generate_activity_feedback
 from app.services.auth_dependency import get_current_user
 from app.services.feedback_service import save_practice_attempt
-from app.services.gesture_recognition_service import recognize_gesture
+from app.services.gesture_recognition_service import get_supported_letters, recognize_gesture
 from app.services.learning_activity_service import record_practice_activity
 from app.services.sign_assessment_service import assess_sign
 
 router = APIRouter(prefix="/api/practice", tags=["Practice"])
+
+
+@router.get("/supported-letters", response_model=SupportedLettersResponse)
+def get_supported_letters_endpoint():
+    # Mirrors the /supported endpoints on the motion-signs/word-signs
+    # routers — the one place the frontend can ask "what letters exist"
+    # without having to first load some learner's per-letter analytics
+    # just to read its dict keys (which is how AssignmentForm gets its
+    # letter list on the single-learner instructor page today).
+    return SupportedLettersResponse(letters=get_supported_letters())
+
 
 @router.post("/feedback", response_model=PracticeFeedbackResponse)
 async def submit_practice_attempt(

@@ -5,7 +5,8 @@ import { AlphabetBoard } from '../components/AlphabetBoard';
 import { PracticeNextPanel } from '../components/PracticeNextPanel';
 import { ConfusionPanel } from '../components/ConfusionPanel';
 import { AssignedFocusPanel } from '../components/AssignedFocusPanel';
-import { AssignmentForm } from '../components/AssignmentForm';
+import { AssignmentForm, AssignmentFormFields } from '../components/AssignmentForm';
+import { InstructorNotesPanel } from '../components/InstructorNotesPanel';
 import { WeakAreasPanel } from '../components/WeakAreasPanel';
 import { AnimatedNumber } from '../components/AnimatedNumber';
 import { AchievementsPanel } from '../components/AchievementsPanel';
@@ -26,6 +27,7 @@ import {
 } from '../types/analytics';
 import { LearnerRosterEntry, LearnerRosterResponse } from '../types/instructor';
 import { Assignment, AssignmentListResponse, AssignmentTopicType } from '../types/instructorAssignment';
+import { InstructorNote, NoteListResponse } from '../types/instructorNote';
 import { SupportedMotionSigns } from '../types/motionSigns';
 import { SupportedWordSigns } from '../types/wordSigns';
 import { LearnerProgress } from '../types/progress';
@@ -56,6 +58,7 @@ export function InstructorLearnerDetail() {
   const [feedback, setFeedback] = useState<LearnerFeedback | null>(null);
   const [learningPlan, setLearningPlan] = useState<LearningPlan | null>(null);
   const [assignments, setAssignments] = useState<Assignment[]>([]);
+  const [notes, setNotes] = useState<InstructorNote[]>([]);
   const [motionSigns, setMotionSigns] = useState<string[]>([]);
   const [wordSigns, setWordSigns] = useState<string[]>([]);
   const [removingAssignmentId, setRemovingAssignmentId] = useState<string | null>(null);
@@ -63,6 +66,8 @@ export function InstructorLearnerDetail() {
   const [loadError, setLoadError] = useState<string | null>(null);
   const [downloadingReport, setDownloadingReport] = useState(false);
   const [downloadError, setDownloadError] = useState<string | null>(null);
+  const [addingToRoster, setAddingToRoster] = useState(false);
+  const [addToRosterError, setAddToRosterError] = useState<string | null>(null);
 
   const loadLearnerDetail = useCallback(async () => {
     if (!learnerId) return;
@@ -79,6 +84,7 @@ export function InstructorLearnerDetail() {
         feedbackRes,
         learningPlanRes,
         assignmentsRes,
+        notesRes,
         motionSignsRes,
         wordSignsRes,
       ] = await Promise.all([
@@ -91,6 +97,7 @@ export function InstructorLearnerDetail() {
         client.get<LearnerFeedback>(`/api/learner/${learnerId}/feedback`),
         client.get<LearningPlan>(`/api/learner/${learnerId}/learning-plan`),
         client.get<AssignmentListResponse>(`/api/instructor/learners/${learnerId}/assignments`),
+        client.get<NoteListResponse>(`/api/instructor/learners/${learnerId}/notes`),
         client.get<SupportedMotionSigns>('/api/motion-signs/supported'),
         client.get<SupportedWordSigns>('/api/word-signs/supported'),
       ]);
@@ -106,6 +113,7 @@ export function InstructorLearnerDetail() {
       setFeedback(feedbackRes.data);
       setLearningPlan(learningPlanRes.data);
       setAssignments(assignmentsRes.data.assignments);
+      setNotes(notesRes.data.notes);
       setMotionSigns(motionSignsRes.data.signs);
       setWordSigns(wordSignsRes.data.words);
     } catch (err) {
@@ -117,13 +125,15 @@ export function InstructorLearnerDetail() {
   }, [learnerId]);
 
   const handleCreateAssignment = useCallback(
-    async (topic: string, topicType: AssignmentTopicType, referenceMedia: File | null = null) => {
+    async (topic: string, topicType: AssignmentTopicType, fields: AssignmentFormFields = { notes: null, dueDate: null, referenceMedia: null }) => {
       if (!learnerId) return;
       const formData = new FormData();
       formData.append('topic', topic);
       formData.append('topic_type', topicType);
-      if (referenceMedia) {
-        formData.append('reference_media', referenceMedia);
+      if (fields.notes) formData.append('notes', fields.notes);
+      if (fields.dueDate) formData.append('due_date', fields.dueDate);
+      if (fields.referenceMedia) {
+        formData.append('reference_media', fields.referenceMedia);
       }
       // No explicit Content-Type here — axios sets multipart/form-data with
       // the correct boundary itself when the body is a FormData instance.
@@ -149,6 +159,32 @@ export function InstructorLearnerDetail() {
       setRemovingAssignmentId(null);
     }
   }, []);
+
+  const handleAddNote = useCallback(
+    async (note: string) => {
+      if (!learnerId) return;
+      const response = await client.post<InstructorNote>(`/api/instructor/learners/${learnerId}/notes`, { note });
+      setNotes((current) => [response.data, ...current]);
+    },
+    [learnerId]
+  );
+
+  const handleAddToRoster = useCallback(async () => {
+    if (!learnerId) return;
+    setAddingToRoster(true);
+    setAddToRosterError(null);
+    try {
+      await client.post(`/api/instructor/learners/${learnerId}/roster`);
+      // Refreshes rosterEntry/rosterNotFound (and everything else) from
+      // scratch so the page reflects the now-owned learner immediately.
+      await loadLearnerDetail();
+    } catch (err) {
+      console.error('Failed to add learner to roster:', err);
+      setAddToRosterError('Could not add this learner to your roster.');
+    } finally {
+      setAddingToRoster(false);
+    }
+  }, [learnerId, loadLearnerDetail]);
 
   useEffect(() => {
     loadLearnerDetail();
@@ -222,9 +258,16 @@ export function InstructorLearnerDetail() {
       </Link>
 
       {rosterNotFound && (
-        <p className="status-message status-message--error">
-          This learner wasn&rsquo;t found on the current roster — showing their data anyway, but double-check the link.
-        </p>
+        <div className="instructor-learner-detail__not-on-roster">
+          <p className="status-message status-message--error">
+            This learner isn&rsquo;t on your roster yet — you can still view their data, but you&rsquo;ll need to add
+            them before assigning a new focus or leaving a note.
+          </p>
+          <button className="btn btn--ghost" onClick={handleAddToRoster} disabled={addingToRoster}>
+            {addingToRoster ? 'Adding…' : 'Add to my roster'}
+          </button>
+          {addToRosterError && <p className="status-message status-message--error">{addToRosterError}</p>}
+        </div>
       )}
 
       {rosterEntry && (
@@ -299,6 +342,8 @@ export function InstructorLearnerDetail() {
           onCreate={handleCreateAssignment}
         />
       </AssignedFocusPanel>
+
+      <InstructorNotesPanel notes={notes} onAdd={handleAddNote} />
 
       {adaptivePlan && <AdaptiveLearningPanel plan={adaptivePlan} />}
       {feedback && <FeedbackPanel feedback={feedback} />}

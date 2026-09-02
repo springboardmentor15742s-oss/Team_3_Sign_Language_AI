@@ -8,6 +8,10 @@ export interface HandLandmarkPoint {
   z: number;
 }
 
+export interface SupportedLettersResponse {
+  letters: string[];
+}
+
 export interface PracticeFeedback {
   // Null when status is no_attempt_detected — that outcome isn't logged.
   attempt_id: string | null;

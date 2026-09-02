@@ -14,3 +14,17 @@ export interface LearnerRosterEntry {
 export interface LearnerRosterResponse {
   learners: LearnerRosterEntry[];
 }
+
+export interface WeakLetterCount {
+  letter: string;
+  learner_count: number;
+}
+
+export interface ClassAnalytics {
+  learner_count: number;
+  active_learner_count: number;
+  average_accuracy_percent: number | null;
+  weak_letter_distribution: WeakLetterCount[];
+  outstanding_assignment_count: number;
+  completed_assignment_count: number;
+}
