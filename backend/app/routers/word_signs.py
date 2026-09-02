@@ -16,6 +16,7 @@ from app.services.auth_dependency import get_current_user
 from app.services.word_sign_service import (
     assess_word_sign,
     get_model_info,
+    get_reference_image_urls,
     get_supported_word_signs,
     recognize_word_sign,
     save_word_sign_attempt,
@@ -53,6 +54,7 @@ def get_supported():
     return SupportedWordSignsResponse(
         words=get_supported_word_signs(),
         model_test_accuracy=info["test_accuracy"],
+        reference_images=get_reference_image_urls(),
     )
 
 

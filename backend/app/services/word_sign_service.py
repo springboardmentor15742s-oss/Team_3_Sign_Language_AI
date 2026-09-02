@@ -37,7 +37,33 @@ from app.services.word_landmark_features import (
 
 MODEL_PATH = Path(__file__).resolve().parent.parent.parent / "data" / "models" / "msasl_intermediate_classifier.pkl"
 
+# One still frame per supported word, pulled from a real MS-ASL training
+# clip by scripts/extract_word_sign_reference_images.py — lives inside
+# the same data/uploads tree main.py already serves at /media/..., so a
+# file here becomes GET /media/word-signs/<slug>.jpg with no new static
+# mount. Shows the learner what the target sign actually looks like,
+# same "real teaching material, not just a name" idea as instructor
+# assignments' reference_media.
+REFERENCE_IMAGE_DIR = Path(__file__).resolve().parent.parent.parent / "data" / "uploads" / "word-signs"
+
 _bundle: dict | None = None
+
+
+def _reference_image_slug(word: str) -> str:
+    return word.replace(" ", "_").replace("'", "")
+
+
+def get_reference_image_urls() -> dict[str, str]:
+    """Maps each supported word to its /media/... reference image URL —
+    only for words that actually have a generated file on disk, so a
+    word the extraction script skipped just has no entry rather than a
+    broken image link."""
+    urls: dict[str, str] = {}
+    for word in get_supported_word_signs():
+        path = REFERENCE_IMAGE_DIR / f"{_reference_image_slug(word)}.jpg"
+        if path.exists():
+            urls[word] = f"/media/word-signs/{path.name}"
+    return urls
 
 
 def _get_bundle() -> dict:

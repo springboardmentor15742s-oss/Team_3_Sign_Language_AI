@@ -12,6 +12,14 @@ interface CaptureError {
   status?: number;
 }
 
+// reference_images values are relative /media/... paths (see
+// word_sign_service.get_reference_image_urls) — same convention
+// AssignedFocusPanel.tsx uses for instructor-uploaded reference media,
+// resolved against the same backend origin the app already talks to.
+function mediaSrc(relativeUrl: string): string {
+  return `${client.defaults.baseURL}${relativeUrl}`;
+}
+
 type CameraState = 'idle' | 'requesting' | 'active' | 'denied' | 'no-device' | 'error';
 
 const CAPTURE_WIDTH = 480;
@@ -63,6 +71,7 @@ export function ConversationalFluency() {
   const [errorDetail, setErrorDetail] = useState<string | null>(null);
   const [supportedWords, setSupportedWords] = useState<string[]>([]);
   const [modelAccuracy, setModelAccuracy] = useState<number | null>(null);
+  const [referenceImages, setReferenceImages] = useState<Record<string, string>>({});
   const [targetWord, setTargetWord] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [result, setResult] = useState<WordSignFeedback | null>(null);
@@ -76,6 +85,7 @@ export function ConversationalFluency() {
       .then((res) => {
         setSupportedWords(res.data.words);
         setModelAccuracy(res.data.model_test_accuracy);
+        setReferenceImages(res.data.reference_images ?? {});
         setTargetWord((current) => {
           if (current) return current;
           if (explicitWord && res.data.words.includes(explicitWord)) return explicitWord;
@@ -204,9 +214,9 @@ export function ConversationalFluency() {
           {modelAccuracy !== null && (
             <>
               {' '}
-              It currently gets <strong>{modelAccuracy.toFixed(0)}%</strong> right on held-out test clips across
-              these {supportedWords.length} words, so treat &ldquo;not quite&rdquo; results as expected sometimes,
-              not necessarily a sign you signed it wrong.
+              It currently gets <strong>{(modelAccuracy * 100).toFixed(0)}%</strong> right on held-out test clips
+              across these {supportedWords.length} words, so treat &ldquo;not quite&rdquo; results as expected
+              sometimes, not necessarily a sign you signed it wrong.
             </>
           )}{' '}
           Only words with enough real training clips are included; more will be added as more real data is
@@ -233,6 +243,28 @@ export function ConversationalFluency() {
               {word}
             </button>
           ))}
+        </div>
+      )}
+
+      {targetWord && (
+        <div className="word-signs__reference">
+          {referenceImages[targetWord] ? (
+            <>
+              <img
+                className="word-signs__reference-image"
+                src={mediaSrc(referenceImages[targetWord])}
+                alt={`Reference photo showing how to sign '${targetWord}'`}
+              />
+              <p className="word-signs__reference-caption">
+                Reference: how <strong>{targetWord}</strong> is signed &mdash; a real frame from the MS-ASL clips
+                this classifier was trained on.
+              </p>
+            </>
+          ) : (
+            <p className="word-signs__reference-caption">
+              No reference photo for &lsquo;{targetWord}&rsquo; yet.
+            </p>
+          )}
         </div>
       )}
 

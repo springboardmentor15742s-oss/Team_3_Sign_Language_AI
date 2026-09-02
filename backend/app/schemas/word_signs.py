@@ -10,6 +10,10 @@ class SupportedWordSignsResponse(BaseModel):
     # this is as reliable as the alphabet classifier — see
     # word_sign_service.get_model_info.
     model_test_accuracy: Optional[float] = None
+    # word -> /media/... URL of a real reference photo (see
+    # word_sign_service.get_reference_image_urls). A word missing from
+    # this dict simply has no reference image yet.
+    reference_images: dict[str, str] = {}
 
 
 class WordSignResponse(BaseModel):

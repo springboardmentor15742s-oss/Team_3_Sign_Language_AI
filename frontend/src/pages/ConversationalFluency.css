@@ -51,6 +51,36 @@
   cursor: not-allowed;
 }
 
+.word-signs__reference {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  padding: var(--space-4) var(--space-5);
+}
+
+.word-signs__reference-image {
+  width: 160px;
+  height: 120px;
+  object-fit: cover;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--color-border);
+  flex-shrink: 0;
+}
+
+.word-signs__reference-caption {
+  margin: 0;
+  font-size: 0.85rem;
+  color: var(--color-text-dim);
+  line-height: 1.5;
+}
+
+.word-signs__reference-caption strong {
+  color: var(--color-accent);
+}
+
 /* Same corner as .countdown-badge (they're never shown at the same
    time — countdown hands off to recording once it elapses), but a
    pill rather than a circle since it also carries the live frame count.
