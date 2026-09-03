@@ -4,6 +4,7 @@ import client from '../api/client';
 import { BulkAssignPanel } from '../components/BulkAssignPanel';
 import { AssignmentFormFields } from '../components/AssignmentForm';
 import { ClassOverviewPanel } from '../components/ClassOverviewPanel';
+import { AssignmentReportPanel } from '../components/AssignmentReportPanel';
 import '../components/DataTable.css';
 import { Topbar } from '../components/Topbar';
 import { ClassAnalytics, LearnerRosterEntry, LearnerRosterResponse } from '../types/instructor';
@@ -11,6 +12,7 @@ import { AssignmentListResponse, AssignmentTopicType } from '../types/instructor
 import { SupportedMotionSigns } from '../types/motionSigns';
 import { SupportedLettersResponse } from '../types/practice';
 import { SupportedWordSigns } from '../types/wordSigns';
+import { AssignmentReportResponse } from '../types/reporting';
 import './Instructor.css';
 
 const WEAK_ACCURACY_THRESHOLD = 70;
@@ -32,6 +34,7 @@ function sortByAccuracyAscending(learners: LearnerRosterEntry[]): LearnerRosterE
 export function Instructor() {
   const [learners, setLearners] = useState<LearnerRosterEntry[] | null>(null);
   const [classAnalytics, setClassAnalytics] = useState<ClassAnalytics | null>(null);
+  const [assignmentReport, setAssignmentReport] = useState<AssignmentReportResponse | null>(null);
   const [letters, setLetters] = useState<string[]>([]);
   const [motionSigns, setMotionSigns] = useState<string[]>([]);
   const [wordSigns, setWordSigns] = useState<string[]>([]);
@@ -50,15 +53,17 @@ export function Instructor() {
   const loadRoster = useCallback(async () => {
     setLoadError(null);
     try {
-      const [rosterRes, analyticsRes, lettersRes, motionSignsRes, wordSignsRes] = await Promise.all([
+      const [rosterRes, analyticsRes, assignmentReportRes, lettersRes, motionSignsRes, wordSignsRes] = await Promise.all([
         client.get<LearnerRosterResponse>('/api/instructor/learners'),
         client.get<ClassAnalytics>('/api/instructor/class-analytics'),
+        client.get<AssignmentReportResponse>('/api/instructor/reports/assignments'),
         client.get<SupportedLettersResponse>('/api/practice/supported-letters'),
         client.get<SupportedMotionSigns>('/api/motion-signs/supported'),
         client.get<SupportedWordSigns>('/api/word-signs/supported'),
       ]);
       setLearners(sortByAccuracyAscending(rosterRes.data.learners));
       setClassAnalytics(analyticsRes.data);
+      setAssignmentReport(assignmentReportRes.data);
       setLetters(lettersRes.data.letters);
       setMotionSigns(motionSignsRes.data.signs);
       setWordSigns(wordSignsRes.data.words);
@@ -101,6 +106,8 @@ export function Instructor() {
       setLearners((current) => (current ? current.filter((l) => l.learner_id !== learnerId) : current));
       const analyticsRes = await client.get<ClassAnalytics>('/api/instructor/class-analytics');
       setClassAnalytics(analyticsRes.data);
+      const assignmentReportRes = await client.get<AssignmentReportResponse>('/api/instructor/reports/assignments');
+      setAssignmentReport(assignmentReportRes.data);
     } catch (err) {
       console.error('Failed to remove learner from roster:', err);
     } finally {
@@ -122,9 +129,11 @@ export function Instructor() {
       if (fields.dueDate) formData.append('due_date', fields.dueDate);
       if (fields.referenceMedia) formData.append('reference_media', fields.referenceMedia);
       await client.post<AssignmentListResponse>('/api/instructor/assignments', formData);
-      // Assignment counts changed; refresh the class overview numbers.
+      // Assignment counts changed; refresh the class overview numbers and the assignment report.
       const analyticsRes = await client.get<ClassAnalytics>('/api/instructor/class-analytics');
       setClassAnalytics(analyticsRes.data);
+      const assignmentReportRes = await client.get<AssignmentReportResponse>('/api/instructor/reports/assignments');
+      setAssignmentReport(assignmentReportRes.data);
     },
     []
   );
@@ -171,6 +180,7 @@ export function Instructor() {
       <Topbar title="Instructor Dashboard" />
 
       {classAnalytics && <ClassOverviewPanel analytics={classAnalytics} />}
+      {assignmentReport && <AssignmentReportPanel report={assignmentReport} />}
 
       <section className="roster-section">
         <form className="roster-section__add-learner" onSubmit={handleAddLearner}>

@@ -253,7 +253,7 @@ export function ConversationalFluency() {
               <img
                 className="word-signs__reference-image"
                 src={mediaSrc(referenceImages[targetWord])}
-                alt={`Reference photo showing how to sign '${targetWord}'`}
+                alt={`How to sign '${targetWord}'`}
               />
               <p className="word-signs__reference-caption">
                 Reference: how <strong>{targetWord}</strong> is signed &mdash; a real frame from the MS-ASL clips

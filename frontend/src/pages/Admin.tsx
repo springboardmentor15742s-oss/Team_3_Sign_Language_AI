@@ -3,8 +3,12 @@ import client from '../api/client';
 import '../components/DataTable.css';
 import { AnimatedNumber } from '../components/AnimatedNumber';
 import { StatsRow, StatTile } from '../components/StatsRow';
+import { ClassOverviewPanel } from '../components/ClassOverviewPanel';
+import { AssignmentReportPanel } from '../components/AssignmentReportPanel';
 import { Topbar } from '../components/Topbar';
 import { AdminOverviewResponse } from '../types/admin';
+import { ClassAnalytics } from '../types/instructor';
+import { AssignmentReportResponse } from '../types/reporting';
 import './Admin.css';
 
 function formatDate(isoString: string): string {
@@ -13,6 +17,13 @@ function formatDate(isoString: string): string {
 
 export function Admin() {
   const [overview, setOverview] = useState<AdminOverviewResponse | null>(null);
+  // Both come from /api/instructor/* — admins are allowed on those
+  // endpoints too (require_role("instructor", "admin")), and
+  // _roster_scope resolves an admin caller to platform-wide (None)
+  // automatically, so these are the exact same platform-scoped numbers
+  // an instructor sees for their own roster, just for everyone.
+  const [classAnalytics, setClassAnalytics] = useState<ClassAnalytics | null>(null);
+  const [assignmentReport, setAssignmentReport] = useState<AssignmentReportResponse | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
   // Per-row, same reasoning as Instructor's roster table — several rows
   // could be downloading independently.
@@ -22,8 +33,14 @@ export function Admin() {
   const loadOverview = useCallback(async () => {
     setLoadError(null);
     try {
-      const response = await client.get<AdminOverviewResponse>('/api/admin/overview');
-      setOverview(response.data);
+      const [overviewRes, analyticsRes, assignmentReportRes] = await Promise.all([
+        client.get<AdminOverviewResponse>('/api/admin/overview'),
+        client.get<ClassAnalytics>('/api/instructor/class-analytics'),
+        client.get<AssignmentReportResponse>('/api/instructor/reports/assignments'),
+      ]);
+      setOverview(overviewRes.data);
+      setClassAnalytics(analyticsRes.data);
+      setAssignmentReport(assignmentReportRes.data);
     } catch (err) {
       console.error('Failed to load admin overview:', err);
       setLoadError('Could not load the platform overview.');
@@ -106,6 +123,9 @@ export function Admin() {
               label="Platform accuracy"
             />
           </StatsRow>
+
+          {classAnalytics && <ClassOverviewPanel analytics={classAnalytics} />}
+          {assignmentReport && <AssignmentReportPanel report={assignmentReport} />}
 
           <section className="admin-users">
             {overview.users.length === 0 ? (

@@ -1,6 +1,9 @@
+import re
+from io import BytesIO
 from typing import List, Optional
 
 from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile
+from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session
 
 from app.database import get_db
@@ -12,6 +15,7 @@ from app.schemas.instructor import (
 )
 from app.schemas.instructor_assignment import AssignmentListResponse, AssignmentResponse
 from app.schemas.instructor_note import NoteCreate, NoteListResponse, NoteResponse
+from app.schemas.reporting import AssignmentReportResponse, ClassReportResponse
 from app.services.auth_dependency import require_role
 from app.services.class_analytics_service import get_class_analytics
 from app.services.instructor_note_service import add_note, list_notes_for_learner
@@ -33,8 +37,15 @@ from app.services.instructor_assignment_service import (
     list_assignments_for_learner,
     media_url,
 )
+from app.services.reporting_pdf_service import render_assignment_report_pdf, render_class_report_pdf
+from app.services.reporting_service import assemble_assignment_report, assemble_class_report
 
 router = APIRouter(prefix="/api/instructor", tags=["Instructor"])
+
+
+def _slugify(text: str) -> str:
+    slug = re.sub(r"[^a-z0-9]+", "-", text.lower()).strip("-")
+    return slug or "report"
 
 
 def _roster_scope(current_user: User) -> Optional[str]:
@@ -133,6 +144,54 @@ def class_analytics(
     current_user: User = Depends(require_role("instructor", "admin")),
 ):
     return get_class_analytics(db, instructor_id=_roster_scope(current_user))
+
+
+@router.get("/reports/class/pdf")
+def get_class_report_pdf(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_role("instructor", "admin")),
+):
+    """PDF export of the same class-analytics numbers shown on the roster
+    page, plus a printable per-learner roster listing. Scope (own roster
+    vs. whole platform) comes from _roster_scope, same as /class-analytics —
+    an admin calling this gets a platform-wide report automatically."""
+    report_data = assemble_class_report(db, instructor_id=_roster_scope(current_user))
+    report = ClassReportResponse(**report_data)
+    pdf_bytes = render_class_report_pdf(report, current_user.name)
+
+    filename = f"{report.scope}-report-{report.generated_at.date().isoformat()}.pdf"
+    return StreamingResponse(
+        BytesIO(pdf_bytes),
+        media_type="application/pdf",
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+    )
+
+
+@router.get("/reports/assignments", response_model=AssignmentReportResponse)
+def get_assignment_report(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_role("instructor", "admin")),
+):
+    """In-app view of the assignment/completion report — same scoping
+    as every other roster-aware endpoint above."""
+    return assemble_assignment_report(db, instructor_id=_roster_scope(current_user))
+
+
+@router.get("/reports/assignments/pdf")
+def get_assignment_report_pdf(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_role("instructor", "admin")),
+):
+    report_data = assemble_assignment_report(db, instructor_id=_roster_scope(current_user))
+    report = AssignmentReportResponse(**report_data)
+    pdf_bytes = render_assignment_report_pdf(report, current_user.name)
+
+    filename = f"{report.scope}-assignment-report-{report.generated_at.date().isoformat()}.pdf"
+    return StreamingResponse(
+        BytesIO(pdf_bytes),
+        media_type="application/pdf",
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+    )
 
 
 @router.post("/learners/{learner_id}/assignments", response_model=AssignmentResponse)

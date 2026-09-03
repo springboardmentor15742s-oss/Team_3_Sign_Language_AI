@@ -22,7 +22,11 @@ from app.services.learning_analytics_service import get_learner_analytics
 TOP_N_WEAK_LETTERS = 10
 
 
-def _roster_learner_ids(db: Session, instructor_id: str = None) -> list[str]:
+def get_roster_learner_ids(db: Session, instructor_id: str = None) -> list[str]:
+    """Public (not module-private) since reporting_service also needs the
+    exact same roster-vs-platform scoping — one place decides what "an
+    instructor's roster" or "the whole platform" means, so a report can
+    never disagree with the class overview panel about who's included."""
     if instructor_id is None:
         return [row.id for row in db.query(User.id).filter(User.role == "learner").all()]
     return [
@@ -34,7 +38,7 @@ def _roster_learner_ids(db: Session, instructor_id: str = None) -> list[str]:
 
 
 def get_class_analytics(db: Session, instructor_id: str = None) -> dict:
-    learner_ids = _roster_learner_ids(db, instructor_id)
+    learner_ids = get_roster_learner_ids(db, instructor_id)
 
     active_count = 0
     accuracies = []

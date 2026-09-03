@@ -1,0 +1,60 @@
+.assignment-report-panel {
+  margin-top: var(--space-4);
+  margin-bottom: var(--space-4);
+}
+
+.assignment-report-panel__header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-3);
+  margin-bottom: var(--space-4);
+}
+
+.assignment-report-panel__header .panel__title {
+  margin-bottom: 0;
+}
+
+.assignment-report-panel__download {
+  flex-shrink: 0;
+  text-align: right;
+}
+
+.assignment-report-panel__download-btn {
+  padding: var(--space-2) var(--space-4);
+  font-size: 0.8rem;
+}
+
+.assignment-report-panel__download-error {
+  margin: var(--space-2) 0 0;
+  font-size: 0.78rem;
+}
+
+.assignment-report-panel__table-wrap {
+  margin-top: var(--space-5);
+}
+
+.assignment-report-panel__badge {
+  font-family: var(--font-mono);
+  font-size: 0.68rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  border-radius: var(--radius-sm);
+  padding: 2px 6px;
+  white-space: nowrap;
+}
+
+.assignment-report-panel__badge--completed {
+  color: var(--color-accent);
+  border: 1px solid var(--color-accent-dim);
+}
+
+.assignment-report-panel__badge--overdue {
+  color: var(--color-warn);
+  border: 1px solid var(--color-warn);
+}
+
+.assignment-report-panel__badge--open {
+  color: var(--color-text-dim);
+  border: 1px solid var(--color-border);
+}
