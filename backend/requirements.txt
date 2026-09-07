@@ -25,11 +25,7 @@ matplotlib==3.11.1
 # Pure Python wheel (py3-none-any) — no compiled extension, so no
 # platform-specific wheel risk like mediapipe/opencv above.
 reportlab==5.0.0
-# Added for the word-level temporal sign classifier (prepare_word_dataset.py /
-# train_word_classifier.py): reads the Kaggle ASL-signs landmark parquet files.
-pandas==2.2.3
-pyarrow==18.1.0
-# Only needed to run scripts/test_integration_workflow.py (FastAPI's
-# TestClient requires httpx to drive real HTTP requests against the app
-# in-process) — not used by the running application itself.
-httpx==0.28.1
+
+# Test suite only (backend/tests/, run via `pytest` from backend/) — not
+# imported by the running app itself.
+pytest==9.1.1

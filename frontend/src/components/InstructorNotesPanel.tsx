@@ -3,6 +3,11 @@ import { InstructorNote } from '../types/instructorNote';
 import './Panel.css';
 import './InstructorNotesPanel.css';
 
+// Mirrors backend/app/schemas/instructor_note.py's MAX_NOTE_LENGTH — a
+// client-side cap so typing past the limit is simply not possible, instead
+// of only failing with a 422 after "Add note" is clicked.
+const MAX_NOTE_LENGTH = 4000;
+
 interface InstructorNotesPanelProps {
   notes: InstructorNote[];
   onAdd: (note: string) => Promise<void>;
@@ -64,6 +69,7 @@ export function InstructorNotesPanel({ notes, onAdd }: InstructorNotesPanelProps
           onChange={(e) => setDraft(e.target.value)}
           placeholder="Add a note about this learner…"
           rows={2}
+          maxLength={MAX_NOTE_LENGTH}
         />
         <button type="submit" className="btn instructor-notes-panel__submit" disabled={submitting || !draft.trim()}>
           {submitting ? 'Saving…' : 'Add note'}

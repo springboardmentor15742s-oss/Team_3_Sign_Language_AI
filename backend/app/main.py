@@ -13,6 +13,7 @@ from app.models import word_sign_attempt
 from app.models import instructor_assignment
 from app.models import instructor_learner
 from app.models import instructor_note
+from app.models import certificate
 
 Base.metadata.create_all(bind=engine)
 
@@ -59,6 +60,8 @@ from app.routers import motion_signs
 app.include_router(motion_signs.router)
 from app.routers import word_signs
 app.include_router(word_signs.router)
+from app.routers import certificates
+app.include_router(certificates.router)
 
 @app.get("/")
 def root():

@@ -21,6 +21,10 @@ const TOPIC_TYPE_LABELS: Record<AssignmentTopicType, string> = {
 
 const MAX_MEDIA_BYTES = 20 * 1024 * 1024;
 
+// Mirrors backend/app/services/instructor_assignment_service.MAX_NOTES_LENGTH
+// — same reasoning as AssignmentForm's copy of this constant.
+const MAX_NOTES_LENGTH = 2000;
+
 // The roster-page counterpart to AssignmentForm: same topic/notes/due-
 // date/media fields, but fans one assignment out to several learners at
 // once instead of being scoped to a single learner's page. Deliberately
@@ -146,7 +150,7 @@ export function BulkAssignPanel({ learners, letters, motionSigns, wordSigns, onA
 
             <label className="assignment-form__field assignment-form__field--wide">
               Notes / instructions (optional)
-              <textarea value={notes} onChange={(e) => setNotes(e.target.value)} rows={2} />
+              <textarea value={notes} onChange={(e) => setNotes(e.target.value)} rows={2} maxLength={MAX_NOTES_LENGTH} />
             </label>
 
             <label className="assignment-form__field">

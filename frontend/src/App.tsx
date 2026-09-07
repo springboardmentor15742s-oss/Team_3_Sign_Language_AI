@@ -15,6 +15,7 @@ import { ConversationalFluency } from './pages/ConversationalFluency';
 import { Instructor } from './pages/Instructor';
 import { InstructorLearnerDetail } from './pages/InstructorLearnerDetail';
 import { Admin } from './pages/Admin';
+import { VerifyCertificate } from './pages/VerifyCertificate';
 
 function App() {
   return (
@@ -28,6 +29,12 @@ function App() {
           <Route path="/" element={<Landing />} />
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Login />} />
+          {/* Public certificate verification — no login required, since
+              the whole point is that anyone holding a code (an employer,
+              say) can confirm it without a platform account. Also
+              reachable with no code pre-filled at /verify. */}
+          <Route path="/verify" element={<VerifyCertificate />} />
+          <Route path="/verify/:code" element={<VerifyCertificate />} />
           <Route
             path="/dashboard"
             element={

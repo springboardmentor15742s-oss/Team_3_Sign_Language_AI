@@ -172,12 +172,12 @@
 
 .result--pass .result__badge {
   color: var(--color-accent);
-  background: color-mix(in srgb, var(--color-accent) 14%, transparent);
+  background: rgba(255, 180, 0, 0.14);
 }
 
 .result--fail .result__badge {
   color: var(--color-warn);
-  background: color-mix(in srgb, var(--color-warn) 14%, transparent);
+  background: rgba(226, 96, 74, 0.14);
 }
 
 .result__feedback {
@@ -390,6 +390,92 @@
 @keyframes live-pulse {
   0%, 100% { opacity: 1; box-shadow: 0 0 0 0 var(--color-accent-glow-strong); }
   50% { opacity: 0.6; box-shadow: 0 0 0 4px transparent; }
+}
+
+.camera-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: var(--space-4);
+}
+
+/* Real-time "Live mode": an optional, off-by-default toggle that polls a
+   non-scoring /recognize endpoint every few hundred milliseconds while a
+   learner holds a pose, so they get a continuously-updating read without
+   any of it ever counting as a real, graded attempt — that still only
+   happens through the existing Capture/Record button. Shared here rather
+   than duplicated per page, same as every other .camera- or .result class
+   above, since all four practice pages (Practice, MotionSigns,
+   ConversationalFluency, CommonSigns) use the identical toggle + readout. */
+.live-mode-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  color: var(--color-text-dim);
+  cursor: pointer;
+  user-select: none;
+}
+
+.live-mode-toggle input {
+  accent-color: var(--color-accent);
+  cursor: pointer;
+}
+
+.live-read {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-4);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--color-border);
+  background: var(--color-surface-raised);
+  font-family: var(--font-mono);
+  font-size: 0.8rem;
+  color: var(--color-text-dim);
+  min-height: 1.2em;
+}
+
+.live-read__dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--color-text-dim);
+  flex-shrink: 0;
+}
+
+.live-read--correct {
+  border-color: var(--color-accent);
+  color: var(--color-text);
+}
+
+.live-read--correct .live-read__dot {
+  background: var(--color-accent);
+  box-shadow: 0 0 0 3px var(--color-accent-glow-strong);
+}
+
+.live-read--incorrect {
+  border-color: var(--color-warn-dim);
+}
+
+.live-read--incorrect .live-read__dot {
+  background: var(--color-warn);
+}
+
+/* Shown while a rolling motion/word-sign window is still being collected
+   (these two topic types can't classify from a single instant — see
+   MotionSigns.tsx / ConversationalFluency.tsx) — a pulse rather than a
+   solid dot signals "still watching", not "done, nothing found". */
+.live-read--waiting .live-read__dot {
+  animation: live-pulse 1.4s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .live-read--waiting .live-read__dot {
+    animation: none;
+  }
 }
 
 @media (max-width: 860px) {

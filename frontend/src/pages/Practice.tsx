@@ -6,7 +6,7 @@ import { useAuth } from '../auth/AuthContext';
 import { Topbar } from '../components/Topbar';
 import { HandLandmarkOverlay } from '../components/HandLandmarkOverlay';
 import { LearnerAnalytics, Recommendations, RecommendationItem } from '../types/analytics';
-import { PracticeFeedback } from '../types/practice';
+import { PracticeFeedback, PracticeRecognizeResult } from '../types/practice';
 import './Practice.css';
 
 interface CaptureError {
@@ -20,6 +20,10 @@ type CameraState = 'idle' | 'requesting' | 'active' | 'denied' | 'no-device' | '
 const CAPTURE_WIDTH = 640;
 const COUNTDOWN_START = 3;
 const COUNTDOWN_TICK_MS = 1000;
+// How often Live mode polls /api/practice/recognize while it's on. Short
+// enough to feel live, long enough not to hammer the backend's MediaPipe
+// + classifier inference for every active learner's camera.
+const LIVE_POLL_INTERVAL_MS = 700;
 
 const EXPLICIT_REASON = 'Chosen from your dashboard';
 
@@ -98,7 +102,17 @@ export function Practice() {
   // Display-only — never read by captureFrame, which always draws from the
   // video element's intrinsic pixels, not its rendered/CSS-transformed box.
   const [zoomed, setZoomed] = useState(false);
-  const practiceStartedAt = useRef<number>(Date.now());
+
+  // Real-time "Live mode" — off by default (see triggerCapture/performCapture
+  // above for the real, graded flow this never touches). While on, polls
+  // POST /api/practice/recognize every LIVE_POLL_INTERVAL_MS and shows a
+  // continuously-updating read; liveEnabledRef mirrors canRunLive below so
+  // the self-rescheduling loop can see the latest gate state synchronously,
+  // without a stale closure over the value from when the loop started.
+  const [liveMode, setLiveMode] = useState(false);
+  const [liveResult, setLiveResult] = useState<PracticeRecognizeResult | null>(null);
+  const liveEnabledRef = useRef(false);
+  const liveTimeoutRef = useRef<number | null>(null);
 
   // Revokes the previous object URL whenever it's replaced, and the final
   // one on unmount — capturedImageUrl is only ever used for the landmark
@@ -126,7 +140,13 @@ export function Practice() {
   const fetchRecommendation = useCallback(async () => {
     if (!user) return;
     try {
-      const response = await client.get<Recommendations>(`/api/learner/${user.id}/recommendations?topic_type=letter`);
+      // This page can only act on a letter (target_letter capture below),
+      // so it must restrict the queue to topic_type=letter — otherwise the
+      // combined-topic recommendation engine could hand it a motion sign
+      // it has no way to practice here.
+      const response = await client.get<Recommendations>(
+        `/api/learner/${user.id}/recommendations?topic_type=letter`
+      );
       setRecommendation(response.data.recommendations[0] ?? FALLBACK_RECOMMENDATION);
       setRecommendationError(null);
     } catch (err) {
@@ -215,7 +235,6 @@ export function Practice() {
 
       const formData = new FormData();
       formData.append('target_letter', recommendation.topic);
-      formData.append('practice_seconds', String(Math.round((Date.now() - practiceStartedAt.current) / 1000)));
       formData.append('image', blob, 'capture.jpg');
 
       const response = await client.post<PracticeFeedback>('/api/practice/feedback', formData);
@@ -226,7 +245,6 @@ export function Practice() {
       // letter's accuracy — can't have changed; only refetch when an
       // attempt actually landed in the DB.
       if (response.data.status !== 'no_attempt_detected') {
-        practiceStartedAt.current = Date.now();
         fetchRecommendation();
         const capturedLetter = response.data.target_letter;
         fetchLetterAccuracy(capturedLetter).then((accuracy) => {
@@ -262,6 +280,61 @@ export function Practice() {
       setSubmitting(false);
     }
   }, [submitting, recommendation, fetchRecommendation, fetchLetterAccuracy]);
+
+  // One step of the Live mode loop: capture a frame, ask the non-scoring
+  // /recognize endpoint what it sees, then re-schedule itself — a
+  // self-pacing recursive setTimeout rather than setInterval, so a slow
+  // response never causes overlapping in-flight requests to pile up.
+  const runLiveStep = useCallback(async () => {
+    if (!liveEnabledRef.current || !videoRef.current) return;
+    try {
+      const blob = await captureFrame(videoRef.current);
+      const formData = new FormData();
+      formData.append('image', blob, 'live.jpg');
+      const response = await client.post<PracticeRecognizeResult>('/api/practice/recognize', formData);
+      if (liveEnabledRef.current) setLiveResult(response.data);
+    } catch (err) {
+      console.error('Live recognize failed:', err);
+    } finally {
+      if (liveEnabledRef.current) {
+        liveTimeoutRef.current = window.setTimeout(runLiveStep, LIVE_POLL_INTERVAL_MS);
+      }
+    }
+  }, []);
+
+  // Live mode only runs while the learner is actually free to be signing
+  // for real feedback — paused during the countdown, an in-flight real
+  // capture, or once a real result is already showing, so it never
+  // competes with (or gets confused with) the graded flow.
+  const canRunLive = liveMode && cameraState === 'active' && !result && countdown === null && !submitting;
+
+  // Declared before the loop-starter effect below so React updates the
+  // ref before that effect reads canRunLive on the same render pass —
+  // runLiveStep's own checks of liveEnabledRef then see the current
+  // value immediately, not one render behind.
+  useEffect(() => {
+    liveEnabledRef.current = canRunLive;
+  }, [canRunLive]);
+
+  useEffect(() => {
+    if (canRunLive) {
+      runLiveStep();
+    } else {
+      setLiveResult(null);
+      if (liveTimeoutRef.current !== null) {
+        window.clearTimeout(liveTimeoutRef.current);
+        liveTimeoutRef.current = null;
+      }
+    }
+  }, [canRunLive, runLiveStep]);
+
+  // Belt-and-suspenders cleanup on unmount, in addition to the effect
+  // above (which already clears the timer whenever canRunLive goes false).
+  useEffect(() => {
+    return () => {
+      if (liveTimeoutRef.current !== null) window.clearTimeout(liveTimeoutRef.current);
+    };
+  }, []);
 
   // Starts the 3-2-1 countdown; the actual capture fires when it elapses.
   // Guarded the same way for both the button click and the spacebar
@@ -395,9 +468,39 @@ export function Practice() {
           </div>
 
           {cameraState === 'active' && (
-            <button type="button" className="btn btn--ghost" onClick={() => setZoomed((current) => !current)}>
-              {zoomed ? 'Normal view' : 'Zoom to hand'}
-            </button>
+            <div className="camera-toolbar">
+              <button type="button" className="btn btn--ghost" onClick={() => setZoomed((current) => !current)}>
+                {zoomed ? 'Normal view' : 'Zoom to hand'}
+              </button>
+              <label className="live-mode-toggle">
+                <input type="checkbox" checked={liveMode} onChange={(e) => setLiveMode(e.target.checked)} />
+                Live evaluation
+              </label>
+            </div>
+          )}
+
+          {cameraState === 'active' && !result && liveMode && (
+            <div
+              className={`live-read${
+                liveResult?.detected && recommendation && liveResult.predicted_letter === recommendation.topic
+                  ? ' live-read--correct'
+                  : liveResult?.detected
+                  ? ' live-read--incorrect'
+                  : ''
+              }`}
+              aria-live="polite"
+            >
+              <span className="live-read__dot" />
+              {countdown !== null || submitting
+                ? 'Live evaluation paused during capture'
+                : !liveResult
+                ? 'Watching for your hand…'
+                : !liveResult.detected
+                ? 'No hand detected'
+                : `Live read: ${liveResult.predicted_letter}${
+                    liveResult.confidence !== null ? ` (${Math.round(liveResult.confidence * 100)}%)` : ''
+                  }`}
+            </div>
           )}
 
           {cameraState === 'active' && !result && !recommendation && (

@@ -15,8 +15,17 @@ from app.schemas.instructor import (
 )
 from app.schemas.instructor_assignment import AssignmentListResponse, AssignmentResponse
 from app.schemas.instructor_note import NoteCreate, NoteListResponse, NoteResponse
+from app.schemas.certificate import CertificateResponse, IssueCertificateRequest, RevokeCertificateRequest
+from app.schemas.class_trends import ClassTrendsResponse
 from app.schemas.reporting import AssignmentReportResponse, ClassReportResponse
 from app.services.auth_dependency import require_role
+from app.services.certificate_service import (
+    CertificateError,
+    get_certificate,
+    issue_certificate_manually,
+    revoke_certificate,
+)
+from app.services.class_trends_service import get_class_trends
 from app.services.class_analytics_service import get_class_analytics
 from app.services.instructor_note_service import add_note, list_notes_for_learner
 from app.services.instructor_service import (
@@ -144,6 +153,18 @@ def class_analytics(
     current_user: User = Depends(require_role("instructor", "admin")),
 ):
     return get_class_analytics(db, instructor_id=_roster_scope(current_user))
+
+
+@router.get("/class-trends", response_model=ClassTrendsResponse)
+def class_trends(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_role("instructor", "admin")),
+):
+    """Roster/platform accuracy over time plus a course-completion
+    breakdown — the trend-over-time view class-analytics' snapshot
+    numbers don't cover. Same _roster_scope as every other endpoint
+    here, so an admin automatically gets the platform-wide version."""
+    return get_class_trends(db, instructor_id=_roster_scope(current_user))
 
 
 @router.get("/reports/class/pdf")
@@ -322,3 +343,41 @@ def get_learner_notes(
 ):
     # Same "don't roster-gate reads" reasoning as list_learner_assignments.
     return {"notes": list_notes_for_learner(db, learner_id)}
+
+
+@router.post("/learners/{learner_id}/certificates", response_model=CertificateResponse)
+def issue_learner_certificate(
+    learner_id: str,
+    payload: IssueCertificateRequest,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_role("instructor", "admin")),
+):
+    """Manual issuance — the "staff can also issue" path alongside
+    sync_auto_certificates' automatic one. Roster-gated like assignments
+    and notes (an admin is exempt via _require_own_learner)."""
+    _require_own_learner(db, current_user, learner_id)
+    try:
+        certificate = issue_certificate_manually(db, learner_id, payload.course_id, current_user)
+    except CertificateError as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+    return certificate
+
+
+@router.post("/certificates/{certificate_id}/revoke", response_model=CertificateResponse)
+def revoke_learner_certificate(
+    certificate_id: str,
+    payload: RevokeCertificateRequest,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_role("instructor", "admin")),
+):
+    """Corrects a wrongly-issued certificate without deleting it (see
+    Certificate model docstring) — roster-gated by looking up the
+    certificate's own learner first, same as delete_learner_assignment
+    looks up its assignment's learner before checking ownership."""
+    certificate = get_certificate(db, certificate_id)
+    if certificate is None:
+        raise HTTPException(status_code=404, detail="Certificate not found.")
+    _require_own_learner(db, current_user, certificate.learner_id)
+
+    updated = revoke_certificate(db, certificate_id, current_user, payload.reason)
+    return updated

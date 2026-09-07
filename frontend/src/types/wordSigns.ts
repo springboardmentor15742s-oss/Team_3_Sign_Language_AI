@@ -16,6 +16,18 @@ export interface SupportedWordSigns {
   reference_images: Record<string, string>;
 }
 
+// Response of the non-scoring POST /api/word-signs/recognize — what Live
+// mode polls repeatedly with short rolling windows of frames. word is null
+// either when no pose was tracked (detected=false) or when a pose was
+// tracked but the classifier didn't land on one of the supported words
+// with enough confidence (detected=true, word=null).
+export interface WordSignRecognizeResult {
+  detected: boolean;
+  word: string | null;
+  confidence: number | null;
+  frame_count: number;
+}
+
 export interface WordSignFeedback {
   // Null when status is no_attempt_detected — that outcome isn't logged
   // as a WordSignAttempt, same convention as MotionSignFeedback.

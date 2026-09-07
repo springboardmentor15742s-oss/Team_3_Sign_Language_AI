@@ -17,6 +17,11 @@ type CameraState = 'idle' | 'requesting' | 'active' | 'denied' | 'no-device' | '
 const CAPTURE_WIDTH = 640;
 const COUNTDOWN_START = 3;
 const COUNTDOWN_TICK_MS = 1000;
+// How often Live mode polls /api/common-signs/recognize while it's on —
+// this page's existing Capture button already calls the same single-frame,
+// non-scoring endpoint, so Live mode here is simply that call on a timer,
+// same pattern as Practice.tsx.
+const LIVE_POLL_INTERVAL_MS = 700;
 
 function captureFrame(video: HTMLVideoElement): Promise<Blob> {
   const scale = CAPTURE_WIDTH / video.videoWidth;
@@ -54,6 +59,16 @@ export function CommonSigns() {
   const [captureError, setCaptureError] = useState<CaptureError | null>(null);
   const [countdown, setCountdown] = useState<number | null>(null);
   const [capturedImageUrl, setCapturedImageUrl] = useState<string | null>(null);
+
+  // Real-time "Live mode" — off by default. This page has no target sign
+  // to compare against by design (see the file-level comment above), so
+  // the live readout just shows whichever supported sign was detected, or
+  // an honest "not recognized" / "no hand detected" — no correct/incorrect
+  // coloring, unlike Practice/MotionSigns/ConversationalFluency.
+  const [liveMode, setLiveMode] = useState(false);
+  const [liveResult, setLiveResult] = useState<CommonSignResult | null>(null);
+  const liveEnabledRef = useRef(false);
+  const liveTimeoutRef = useRef<number | null>(null);
 
   useEffect(() => {
     client
@@ -123,6 +138,55 @@ export function CommonSigns() {
       setSubmitting(false);
     }
   }, [submitting]);
+
+  // One step of the Live mode loop: capture a frame, ask the non-scoring
+  // /recognize endpoint what it sees, then re-schedule itself — a
+  // self-pacing recursive setTimeout rather than setInterval, so a slow
+  // response never causes overlapping in-flight requests to pile up.
+  const runLiveStep = useCallback(async () => {
+    if (!liveEnabledRef.current || !videoRef.current) return;
+    try {
+      const blob = await captureFrame(videoRef.current);
+      const formData = new FormData();
+      formData.append('image', blob, 'live.jpg');
+      const response = await client.post<CommonSignResult>('/api/common-signs/recognize', formData);
+      if (liveEnabledRef.current) setLiveResult(response.data);
+    } catch (err) {
+      console.error('Live recognize failed:', err);
+    } finally {
+      if (liveEnabledRef.current) {
+        liveTimeoutRef.current = window.setTimeout(runLiveStep, LIVE_POLL_INTERVAL_MS);
+      }
+    }
+  }, []);
+
+  // Live mode only runs while the learner is free to trigger a real
+  // capture — paused during the countdown, an in-flight submission, or
+  // once a result is already showing.
+  const canRunLive = liveMode && cameraState === 'active' && !result && countdown === null && !submitting;
+
+  useEffect(() => {
+    liveEnabledRef.current = canRunLive;
+  }, [canRunLive]);
+
+  useEffect(() => {
+    if (canRunLive) {
+      runLiveStep();
+    } else {
+      setLiveResult(null);
+      if (liveTimeoutRef.current !== null) {
+        window.clearTimeout(liveTimeoutRef.current);
+        liveTimeoutRef.current = null;
+      }
+    }
+  }, [canRunLive, runLiveStep]);
+
+  useEffect(() => {
+    return () => {
+      liveEnabledRef.current = false;
+      if (liveTimeoutRef.current !== null) window.clearTimeout(liveTimeoutRef.current);
+    };
+  }, []);
 
   const triggerCapture = useCallback(() => {
     if (submitting || result || countdown !== null) return;
@@ -229,6 +293,30 @@ export function CommonSigns() {
               </div>
             )}
           </div>
+
+          {cameraState === 'active' && (
+            <div className="camera-toolbar">
+              <label className="live-mode-toggle">
+                <input type="checkbox" checked={liveMode} onChange={(e) => setLiveMode(e.target.checked)} />
+                Live evaluation
+              </label>
+            </div>
+          )}
+
+          {cameraState === 'active' && !result && liveMode && (
+            <div className={`live-read${liveResult?.sign ? ' live-read--correct' : ''}`} aria-live="polite">
+              <span className="live-read__dot" />
+              {countdown !== null || submitting
+                ? 'Live evaluation paused during capture'
+                : !liveResult
+                ? 'Watching for your hand…'
+                : !liveResult.detected_hand
+                ? 'No hand detected'
+                : liveResult.sign
+                ? `Live read: ${liveResult.sign}`
+                : 'Hand detected — not recognized'}
+            </div>
+          )}
 
           {cameraState === 'active' && !result && (
             <div className="capture-controls">

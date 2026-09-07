@@ -13,6 +13,7 @@ from app.schemas.word_signs import (
 from app.services.adaptive_learning_service import get_adaptive_learning_plan
 from app.services.ai_feedback_service import generate_activity_feedback
 from app.services.auth_dependency import get_current_user
+from app.services.certificate_service import sync_auto_certificates
 from app.services.word_sign_service import (
     assess_word_sign,
     get_model_info,
@@ -111,6 +112,7 @@ async def submit_word_sign_attempt(
         attempt = save_word_sign_attempt(db, current_user.id, assessment)
         attempt_id = attempt.id
         created_at = attempt.created_at
+        sync_auto_certificates(db, current_user.id, "conversational-fluency")
 
     return WordSignFeedbackResponse(
         attempt_id=attempt_id,

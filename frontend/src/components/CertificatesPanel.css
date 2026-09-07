@@ -1,0 +1,150 @@
+.certificates-panel {
+  margin-top: var(--space-4);
+  margin-bottom: var(--space-4);
+}
+
+.certificate-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.certificate-list__item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding-bottom: var(--space-3);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.certificate-list__item:last-child {
+  border-bottom: none;
+  padding-bottom: 0;
+}
+
+.certificate-list__item--revoked {
+  opacity: 0.6;
+}
+
+.certificate-list__body {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.certificate-list__title {
+  font-family: var(--font-heading);
+  font-weight: 600;
+  font-size: 0.95rem;
+  color: var(--color-text);
+}
+
+.certificate-list__meta {
+  font-size: 0.8rem;
+  color: var(--color-text-dim);
+}
+
+.certificate-list__code {
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  color: var(--color-text-faint);
+  letter-spacing: 0.03em;
+}
+
+.certificate-list__actions {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.certificates-panel__download-btn {
+  padding: var(--space-2) var(--space-3);
+  font-size: 0.78rem;
+}
+
+.certificates-panel__revoke-btn {
+  background: transparent;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  color: var(--color-text-dim);
+  font-size: 0.75rem;
+  padding: var(--space-2) var(--space-3);
+  cursor: pointer;
+  transition: color 150ms ease, border-color 150ms ease;
+}
+
+.certificates-panel__revoke-btn:hover:not(:disabled) {
+  color: var(--color-warn);
+  border-color: var(--color-warn);
+}
+
+.certificates-panel__revoke-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.certificates-panel__subtitle {
+  margin: var(--space-5) 0 var(--space-3);
+  font-family: var(--font-heading);
+  font-size: 0.78rem;
+  font-weight: 600;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  color: var(--color-text-faint);
+}
+
+.certificates-panel__revoked,
+.certificates-panel__progress {
+  padding-top: var(--space-2);
+  border-top: 1px solid var(--color-border);
+}
+
+.certificates-panel__progress-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.certificates-panel__progress-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  font-size: 0.88rem;
+  color: var(--color-text);
+  margin-bottom: var(--space-2);
+}
+
+.certificates-panel__progress-count {
+  font-family: var(--font-mono);
+  font-size: 0.78rem;
+  color: var(--color-text-dim);
+}
+
+.certificates-panel__progress-track {
+  height: 6px;
+  border-radius: var(--radius-sm);
+  background: var(--color-surface-raised);
+  overflow: hidden;
+}
+
+.certificates-panel__progress-fill {
+  height: 100%;
+  background: var(--gradient-accent);
+  border-radius: var(--radius-sm);
+  transition: width 900ms var(--ease-out);
+}
+
+.certificates-panel__issue-btn {
+  margin-top: var(--space-2);
+  padding: var(--space-1) var(--space-3);
+  font-size: 0.75rem;
+}

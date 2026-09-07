@@ -13,6 +13,7 @@ from app.schemas.motion_signs import (
 from app.services.adaptive_learning_service import get_adaptive_learning_plan
 from app.services.ai_feedback_service import generate_activity_feedback
 from app.services.auth_dependency import get_current_user
+from app.services.certificate_service import sync_auto_certificates
 from app.services.motion_sign_service import (
     SUPPORTED_MOTION_SIGNS,
     assess_motion_sign,
@@ -108,6 +109,9 @@ async def submit_motion_sign_attempt(
         attempt = save_motion_sign_attempt(db, current_user.id, assessment)
         attempt_id = attempt.id
         created_at = attempt.created_at
+        # Cheap no-op unless this attempt happens to be the learner's
+        # last remaining sign in the course — see certificate_service.
+        sync_auto_certificates(db, current_user.id, "everyday-gestures")
 
     return MotionSignFeedbackResponse(
         attempt_id=attempt_id,

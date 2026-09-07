@@ -3,7 +3,7 @@ import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import client from '../api/client';
 import { Topbar } from '../components/Topbar';
-import { SupportedWordSigns, WordSignFeedback } from '../types/wordSigns';
+import { SupportedWordSigns, WordSignFeedback, WordSignRecognizeResult } from '../types/wordSigns';
 import './Practice.css';
 import './ConversationalFluency.css';
 
@@ -29,6 +29,16 @@ const COUNTDOWN_TICK_MS = 1000;
 // matches routers/word_signs.py's MIN_FRAMES/MAX_FRAMES bounds ([8, 90]).
 const RECORDING_DURATION_MS = 3000;
 const RECORDING_FRAME_INTERVAL_MS = 120; // ~25 frames per recording
+
+// Real-time "Live mode": word signs can't classify from a single instant
+// either (same reasoning as MotionSigns.tsx), so each live window collects
+// LIVE_WINDOW_FRAME_COUNT frames (respecting this router's own
+// [MIN_FRAMES=8, MAX_FRAMES=90] bounds) and submits them to the
+// non-scoring /recognize endpoint before pausing and starting the next
+// window. Honestly ~2s-latency "live", not frame-by-frame.
+const LIVE_WINDOW_FRAME_COUNT = 10;
+const LIVE_WINDOW_FRAME_INTERVAL_MS = 150; // ~1.5s to collect one window
+const LIVE_WINDOW_GAP_MS = 250; // pause between windows
 
 function captureFrame(video: HTMLVideoElement): Promise<Blob> {
   const scale = CAPTURE_WIDTH / video.videoWidth;
@@ -78,6 +88,15 @@ export function ConversationalFluency() {
   const [captureError, setCaptureError] = useState<CaptureError | null>(null);
   const [countdown, setCountdown] = useState<number | null>(null);
   const [recordingFrameCount, setRecordingFrameCount] = useState<number | null>(null);
+
+  // Real-time "Live mode" — off by default, and completely separate from
+  // recordingFramesRef/submitRecording above (the real, graded Record flow
+  // this never touches or competes with).
+  const [liveMode, setLiveMode] = useState(false);
+  const [liveResult, setLiveResult] = useState<WordSignRecognizeResult | null>(null);
+  const [liveCollectingWindow, setLiveCollectingWindow] = useState(false);
+  const liveEnabledRef = useRef(false);
+  const liveTimeoutRef = useRef<number | null>(null);
 
   useEffect(() => {
     client
@@ -152,6 +171,78 @@ export function ConversationalFluency() {
     },
     [targetWord]
   );
+
+  // One live window: collects its own short frame burst into a local
+  // array (never recordingFramesRef, so it can't clobber an in-progress
+  // real recording), submits it to the non-scoring /recognize endpoint,
+  // then re-schedules the next window — a self-pacing recursive setTimeout
+  // rather than setInterval, so a slow response never piles up overlapping
+  // requests.
+  const runLiveWindow = useCallback(async () => {
+    if (!liveEnabledRef.current || !videoRef.current) return;
+
+    setLiveCollectingWindow(true);
+    const frames: Blob[] = [];
+    for (let i = 0; i < LIVE_WINDOW_FRAME_COUNT; i++) {
+      if (!liveEnabledRef.current || !videoRef.current) {
+        setLiveCollectingWindow(false);
+        return;
+      }
+      try {
+        frames.push(await captureFrame(videoRef.current));
+      } catch (err) {
+        console.error('Live frame capture failed:', err);
+      }
+      if (i < LIVE_WINDOW_FRAME_COUNT - 1) {
+        await new Promise((resolve) => window.setTimeout(resolve, LIVE_WINDOW_FRAME_INTERVAL_MS));
+      }
+    }
+    setLiveCollectingWindow(false);
+    if (!liveEnabledRef.current) return;
+
+    try {
+      const formData = new FormData();
+      frames.forEach((blob, i) => formData.append('images', blob, `live-${i}.jpg`));
+      const response = await client.post<WordSignRecognizeResult>('/api/word-signs/recognize', formData);
+      if (liveEnabledRef.current) setLiveResult(response.data);
+    } catch (err) {
+      console.error('Live recognize failed:', err);
+    } finally {
+      if (liveEnabledRef.current) {
+        liveTimeoutRef.current = window.setTimeout(runLiveWindow, LIVE_WINDOW_GAP_MS);
+      }
+    }
+  }, []);
+
+  // Live mode only runs while the learner is actually free to do a real,
+  // graded recording — paused during the countdown, an in-flight
+  // recording/submission, or once a real result is already showing.
+  const canRunLive =
+    liveMode && cameraState === 'active' && !result && countdown === null && !submitting && recordingFrameCount === null;
+
+  useEffect(() => {
+    liveEnabledRef.current = canRunLive;
+  }, [canRunLive]);
+
+  useEffect(() => {
+    if (canRunLive) {
+      runLiveWindow();
+    } else {
+      setLiveResult(null);
+      setLiveCollectingWindow(false);
+      if (liveTimeoutRef.current !== null) {
+        window.clearTimeout(liveTimeoutRef.current);
+        liveTimeoutRef.current = null;
+      }
+    }
+  }, [canRunLive, runLiveWindow]);
+
+  useEffect(() => {
+    return () => {
+      liveEnabledRef.current = false;
+      if (liveTimeoutRef.current !== null) window.clearTimeout(liveTimeoutRef.current);
+    };
+  }, []);
 
   // Runs once the 3-2-1 countdown elapses: grabs frames on a fixed
   // interval for RECORDING_DURATION_MS, then submits the whole clip.
@@ -341,6 +432,41 @@ export function ConversationalFluency() {
               </div>
             )}
           </div>
+
+          {cameraState === 'active' && (
+            <div className="camera-toolbar">
+              <label className="live-mode-toggle">
+                <input type="checkbox" checked={liveMode} onChange={(e) => setLiveMode(e.target.checked)} />
+                Live evaluation
+              </label>
+            </div>
+          )}
+
+          {cameraState === 'active' && !result && liveMode && (
+            <div
+              className={`live-read${
+                liveResult?.detected && liveResult.word && targetWord && liveResult.word === targetWord
+                  ? ' live-read--correct'
+                  : liveResult?.detected
+                  ? ' live-read--incorrect'
+                  : ''
+              }${liveCollectingWindow ? ' live-read--waiting' : ''}`}
+              aria-live="polite"
+            >
+              <span className="live-read__dot" />
+              {countdown !== null || submitting || recordingFrameCount !== null
+                ? 'Live evaluation paused during recording'
+                : liveCollectingWindow
+                ? 'Gathering a short clip…'
+                : !liveResult
+                ? 'Watching for a pose…'
+                : !liveResult.detected
+                ? 'No pose detected'
+                : `Live read: ${liveResult.word}${
+                    liveResult.confidence !== null ? ` (${Math.round(liveResult.confidence * 100)}%)` : ''
+                  }`}
+            </div>
+          )}
 
           {cameraState === 'active' && !result && targetWord && (
             <div className="capture-controls">

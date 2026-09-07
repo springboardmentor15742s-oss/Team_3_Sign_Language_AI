@@ -1,11 +1,13 @@
 from datetime import datetime
 from typing import Optional
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
+
+MAX_NOTE_LENGTH = 4000
 
 
 class NoteCreate(BaseModel):
-    note: str
+    note: str = Field(..., min_length=1, max_length=MAX_NOTE_LENGTH)
 
 
 class NoteResponse(BaseModel):

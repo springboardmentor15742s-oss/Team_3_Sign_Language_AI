@@ -3,7 +3,7 @@ import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import client from '../api/client';
 import { Topbar } from '../components/Topbar';
-import { MotionSignFeedback, SupportedMotionSigns } from '../types/motionSigns';
+import { MotionSignFeedback, MotionSignRecognizeResult, SupportedMotionSigns } from '../types/motionSigns';
 import './Practice.css';
 import './MotionSigns.css';
 
@@ -22,6 +22,17 @@ const COUNTDOWN_TICK_MS = 1000;
 // backend, which rejects a sequence outside [5, 90] frames.
 const RECORDING_DURATION_MS = 2400;
 const RECORDING_FRAME_INTERVAL_MS = 120; // ~20 frames per recording
+
+// Real-time "Live mode" for motion signs can't classify from a single
+// instant like Practice.tsx/CommonSigns.tsx — motion needs a short window.
+// Each live window collects LIVE_WINDOW_FRAME_COUNT frames (well within
+// motion_signs.py's [MIN_FRAMES=5, MAX_FRAMES=90] bounds), submits them to
+// the non-scoring /recognize endpoint, then pauses briefly before starting
+// the next window. This is honestly ~1.5s-latency "live", not frame-by-
+// frame — the UI copy says so rather than implying instant feedback.
+const LIVE_WINDOW_FRAME_COUNT = 8;
+const LIVE_WINDOW_FRAME_INTERVAL_MS = 150; // ~1.2s to collect one window
+const LIVE_WINDOW_GAP_MS = 250; // pause between windows
 
 function captureFrame(video: HTMLVideoElement): Promise<Blob> {
   const scale = CAPTURE_WIDTH / video.videoWidth;
@@ -66,6 +77,17 @@ export function MotionSigns() {
   const [captureError, setCaptureError] = useState<CaptureError | null>(null);
   const [countdown, setCountdown] = useState<number | null>(null);
   const [recordingFrameCount, setRecordingFrameCount] = useState<number | null>(null);
+
+  // Real-time "Live mode" — off by default, and completely separate from
+  // recordingFramesRef/submitRecording above (the real, graded Record flow
+  // this never touches or competes with). collectingWindow distinguishes
+  // "gathering this window's frames" from "waiting on the /recognize
+  // response" so the readout can say something honest either way.
+  const [liveMode, setLiveMode] = useState(false);
+  const [liveResult, setLiveResult] = useState<MotionSignRecognizeResult | null>(null);
+  const [liveCollectingWindow, setLiveCollectingWindow] = useState(false);
+  const liveEnabledRef = useRef(false);
+  const liveTimeoutRef = useRef<number | null>(null);
 
   useEffect(() => {
     client
@@ -142,6 +164,78 @@ export function MotionSigns() {
     },
     [targetSign]
   );
+
+  // One live window: collects its own short frame burst into a local
+  // array (never recordingFramesRef, so it can't clobber an in-progress
+  // real recording), submits it to the non-scoring /recognize endpoint,
+  // then re-schedules the next window — a self-pacing recursive setTimeout
+  // rather than setInterval, so a slow response never piles up overlapping
+  // requests.
+  const runLiveWindow = useCallback(async () => {
+    if (!liveEnabledRef.current || !videoRef.current) return;
+
+    setLiveCollectingWindow(true);
+    const frames: Blob[] = [];
+    for (let i = 0; i < LIVE_WINDOW_FRAME_COUNT; i++) {
+      if (!liveEnabledRef.current || !videoRef.current) {
+        setLiveCollectingWindow(false);
+        return;
+      }
+      try {
+        frames.push(await captureFrame(videoRef.current));
+      } catch (err) {
+        console.error('Live frame capture failed:', err);
+      }
+      if (i < LIVE_WINDOW_FRAME_COUNT - 1) {
+        await new Promise((resolve) => window.setTimeout(resolve, LIVE_WINDOW_FRAME_INTERVAL_MS));
+      }
+    }
+    setLiveCollectingWindow(false);
+    if (!liveEnabledRef.current) return;
+
+    try {
+      const formData = new FormData();
+      frames.forEach((blob, i) => formData.append('images', blob, `live-${i}.jpg`));
+      const response = await client.post<MotionSignRecognizeResult>('/api/motion-signs/recognize', formData);
+      if (liveEnabledRef.current) setLiveResult(response.data);
+    } catch (err) {
+      console.error('Live recognize failed:', err);
+    } finally {
+      if (liveEnabledRef.current) {
+        liveTimeoutRef.current = window.setTimeout(runLiveWindow, LIVE_WINDOW_GAP_MS);
+      }
+    }
+  }, []);
+
+  // Live mode only runs while the learner is actually free to do a real,
+  // graded recording — paused during the countdown, an in-flight
+  // recording/submission, or once a real result is already showing.
+  const canRunLive =
+    liveMode && cameraState === 'active' && !result && countdown === null && !submitting && recordingFrameCount === null;
+
+  useEffect(() => {
+    liveEnabledRef.current = canRunLive;
+  }, [canRunLive]);
+
+  useEffect(() => {
+    if (canRunLive) {
+      runLiveWindow();
+    } else {
+      setLiveResult(null);
+      setLiveCollectingWindow(false);
+      if (liveTimeoutRef.current !== null) {
+        window.clearTimeout(liveTimeoutRef.current);
+        liveTimeoutRef.current = null;
+      }
+    }
+  }, [canRunLive, runLiveWindow]);
+
+  useEffect(() => {
+    return () => {
+      liveEnabledRef.current = false;
+      if (liveTimeoutRef.current !== null) window.clearTimeout(liveTimeoutRef.current);
+    };
+  }, []);
 
   // Runs once the 3-2-1 countdown elapses: grabs frames on a fixed
   // interval for RECORDING_DURATION_MS, then submits the whole clip.
@@ -302,6 +396,41 @@ export function MotionSigns() {
               </div>
             )}
           </div>
+
+          {cameraState === 'active' && (
+            <div className="camera-toolbar">
+              <label className="live-mode-toggle">
+                <input type="checkbox" checked={liveMode} onChange={(e) => setLiveMode(e.target.checked)} />
+                Live evaluation
+              </label>
+            </div>
+          )}
+
+          {cameraState === 'active' && !result && liveMode && (
+            <div
+              className={`live-read${
+                liveResult?.detected && liveResult.sign && targetSign && liveResult.sign === targetSign
+                  ? ' live-read--correct'
+                  : liveResult?.detected
+                  ? ' live-read--incorrect'
+                  : ''
+              }${liveCollectingWindow ? ' live-read--waiting' : ''}`}
+              aria-live="polite"
+            >
+              <span className="live-read__dot" />
+              {countdown !== null || submitting || recordingFrameCount !== null
+                ? 'Live evaluation paused during recording'
+                : liveCollectingWindow
+                ? 'Gathering a short clip…'
+                : !liveResult
+                ? 'Watching for motion…'
+                : !liveResult.detected
+                ? 'No hand detected'
+                : !liveResult.sign
+                ? 'Motion detected — not Wave or Clap'
+                : `Live read: ${liveResult.sign}`}
+            </div>
+          )}
 
           {cameraState === 'active' && !result && targetSign && (
             <div className="capture-controls">

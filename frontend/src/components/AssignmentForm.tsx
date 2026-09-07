@@ -26,6 +26,9 @@ const TOPIC_TYPE_LABELS: Record<AssignmentTopicType, string> = {
 // message instead of only after a slow upload hits the server's limit.
 const MAX_MEDIA_BYTES = 20 * 1024 * 1024;
 
+// Mirrors backend/app/services/instructor_assignment_service.MAX_NOTES_LENGTH.
+const MAX_NOTES_LENGTH = 2000;
+
 export function AssignmentForm({ letters, motionSigns, wordSigns, onCreate }: AssignmentFormProps) {
   const [topicType, setTopicType] = useState<AssignmentTopicType>('letter');
   const [notes, setNotes] = useState('');
@@ -115,6 +118,7 @@ export function AssignmentForm({ letters, motionSigns, wordSigns, onCreate }: As
           onChange={(e) => setNotes(e.target.value)}
           placeholder="e.g. focus on hand orientation, not speed"
           rows={2}
+          maxLength={MAX_NOTES_LENGTH}
         />
       </label>
 

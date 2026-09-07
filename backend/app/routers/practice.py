@@ -5,10 +5,15 @@ from sqlalchemy.orm import Session
 
 from app.database import get_db
 from app.models.user import User
-from app.schemas.practice import PracticeFeedbackResponse, SupportedLettersResponse
+from app.schemas.practice import (
+    PracticeFeedbackResponse,
+    PracticeRecognizeResponse,
+    SupportedLettersResponse,
+)
 from app.services.adaptive_learning_service import get_adaptive_learning_plan
 from app.services.ai_feedback_service import generate_activity_feedback
 from app.services.auth_dependency import get_current_user
+from app.services.certificate_service import sync_auto_certificates
 from app.services.feedback_service import save_practice_attempt
 from app.services.gesture_recognition_service import get_supported_letters, recognize_gesture
 from app.services.learning_activity_service import record_practice_activity
@@ -25,6 +30,44 @@ def get_supported_letters_endpoint():
     # just to read its dict keys (which is how AssignmentForm gets its
     # letter list on the single-learner instructor page today).
     return SupportedLettersResponse(letters=get_supported_letters())
+
+
+@router.post("/recognize", response_model=PracticeRecognizeResponse)
+async def recognize(
+    image: UploadFile = File(...),
+    current_user: User = Depends(get_current_user),
+):
+    """
+    Runs an uploaded frame through gesture recognition only — no target
+    letter, no assessment, no persistence. Mirrors motion_signs.py's /
+    word_signs.py's / common_signs.py's own /recognize endpoints (this is
+    the one topic type that didn't already have one): a standalone,
+    unscored reader.
+
+    This is what the frontend's real-time "Live mode" polls every few
+    hundred milliseconds while a learner holds a pose, so they get a
+    continuously-updating read of what the model currently sees without
+    any of it ever counting as a real practice attempt. The graded,
+    logged attempt still only happens through /feedback with a real
+    target_letter, exactly as before — this endpoint changes nothing
+    about how attempts, streaks, or certificates are computed.
+    """
+    contents = await image.read()
+    file_bytes = np.frombuffer(contents, dtype=np.uint8)
+    decoded_image = cv2.imdecode(file_bytes, cv2.IMREAD_COLOR)
+    if decoded_image is None:
+        raise HTTPException(status_code=400, detail="Could not decode uploaded image")
+
+    gesture_result = recognize_gesture(decoded_image)
+    if gesture_result is None:
+        return PracticeRecognizeResponse(detected=False)
+
+    return PracticeRecognizeResponse(
+        detected=True,
+        predicted_letter=gesture_result["letter"],
+        confidence=gesture_result["confidence"],
+        landmarks=gesture_result.get("landmarks"),
+    )
 
 
 @router.post("/feedback", response_model=PracticeFeedbackResponse)
@@ -71,6 +114,7 @@ async def submit_practice_attempt(
     if assessment["status"] != "no_attempt_detected":
         attempt = save_practice_attempt(db, current_user.id, assessment)
         record_practice_activity(db, current_user.id, assessment["target_letter"], practice_seconds)
+        sync_auto_certificates(db, current_user.id, "alphabet-fundamentals")
         attempt_id = attempt.id
         created_at = attempt.created_at
 

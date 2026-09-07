@@ -12,11 +12,13 @@ import { AdaptiveLearningPanel } from '../components/AdaptiveLearningPanel';
 import { FeedbackPanel } from '../components/FeedbackPanel';
 import { LearningPlanPanel } from '../components/LearningPlanPanel';
 import { AssignedFocusPanel } from '../components/AssignedFocusPanel';
+import { CertificatesPanel } from '../components/CertificatesPanel';
 import { StatsRow, StatTile } from '../components/StatsRow';
 import { Topbar } from '../components/Topbar';
 import { AdaptiveLearningPlan, ConfusionPair, LearnerAnalytics, LearnerFeedback, LearningPlan, RecommendationItem } from '../types/analytics';
 import { Assignment, AssignmentListResponse } from '../types/instructorAssignment';
 import { LearnerProgress } from '../types/progress';
+import { Certificate, CertificateListResponse, CertificationStatusResponse, CourseCertificationStatus } from '../types/certificate';
 import './Dashboard.css';
 
 export function Dashboard() {
@@ -30,6 +32,8 @@ export function Dashboard() {
   const [learningPlan, setLearningPlan] = useState<LearningPlan | null>(null);
   const [assignments, setAssignments] = useState<Assignment[]>([]);
   const [completingAssignmentId, setCompletingAssignmentId] = useState<string | null>(null);
+  const [certificates, setCertificates] = useState<Certificate[]>([]);
+  const [certificationStatus, setCertificationStatus] = useState<CourseCertificationStatus[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [downloadingReport, setDownloadingReport] = useState(false);
@@ -40,7 +44,7 @@ export function Dashboard() {
     setLoading(true);
     setLoadError(null);
     try {
-      const [analyticsRes, recommendationsRes, confusionRes, progressRes, adaptivePlanRes, feedbackRes, learningPlanRes, assignmentsRes] = await Promise.all([
+      const [analyticsRes, recommendationsRes, confusionRes, progressRes, adaptivePlanRes, feedbackRes, learningPlanRes, assignmentsRes, certificatesRes, certificationStatusRes] = await Promise.all([
         client.get<LearnerAnalytics>(`/api/learner/${user.id}/analytics`),
         client.get<{ recommendations: RecommendationItem[] }>(`/api/learner/${user.id}/recommendations`),
         client.get<{ pairs: ConfusionPair[] }>(`/api/learner/${user.id}/confusion-pairs`),
@@ -49,6 +53,8 @@ export function Dashboard() {
         client.get<LearnerFeedback>(`/api/learner/${user.id}/feedback`),
         client.get<LearningPlan>(`/api/learner/${user.id}/learning-plan`),
         client.get<AssignmentListResponse>(`/api/learner/${user.id}/assignments`),
+        client.get<CertificateListResponse>(`/api/certificates/learner/${user.id}`),
+        client.get<CertificationStatusResponse>(`/api/certificates/learner/${user.id}/status`),
       ]);
       setAnalytics(analyticsRes.data);
       setRecommendations(recommendationsRes.data.recommendations);
@@ -58,6 +64,8 @@ export function Dashboard() {
       setFeedback(feedbackRes.data);
       setLearningPlan(learningPlanRes.data);
       setAssignments(assignmentsRes.data.assignments);
+      setCertificates(certificatesRes.data.certificates);
+      setCertificationStatus(certificationStatusRes.data.courses);
     } catch (err) {
       console.error('Failed to load dashboard data:', err);
       setLoadError('Could not load dashboard data.');
@@ -230,6 +238,8 @@ export function Dashboard() {
           <ForecastPanel forecast={progress.forecast} />
         </>
       )}
+
+      {user && <CertificatesPanel learnerId={user.id} certificates={certificates} status={certificationStatus} />}
     </div>
   );
 }

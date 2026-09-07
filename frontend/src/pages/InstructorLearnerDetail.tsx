@@ -15,6 +15,7 @@ import { ForecastPanel } from '../components/ForecastPanel';
 import { AdaptiveLearningPanel } from '../components/AdaptiveLearningPanel';
 import { FeedbackPanel } from '../components/FeedbackPanel';
 import { LearningPlanPanel } from '../components/LearningPlanPanel';
+import { CertificatesPanel } from '../components/CertificatesPanel';
 import { StatsRow, StatTile } from '../components/StatsRow';
 import { Topbar } from '../components/Topbar';
 import {
@@ -31,6 +32,7 @@ import { InstructorNote, NoteListResponse } from '../types/instructorNote';
 import { SupportedMotionSigns } from '../types/motionSigns';
 import { SupportedWordSigns } from '../types/wordSigns';
 import { LearnerProgress } from '../types/progress';
+import { Certificate, CertificateListResponse, CertificationStatusResponse, CourseCertificationStatus } from '../types/certificate';
 import '../pages/Dashboard.css';
 import './InstructorLearnerDetail.css';
 
@@ -59,6 +61,8 @@ export function InstructorLearnerDetail() {
   const [learningPlan, setLearningPlan] = useState<LearningPlan | null>(null);
   const [assignments, setAssignments] = useState<Assignment[]>([]);
   const [notes, setNotes] = useState<InstructorNote[]>([]);
+  const [certificates, setCertificates] = useState<Certificate[]>([]);
+  const [certificationStatus, setCertificationStatus] = useState<CourseCertificationStatus[]>([]);
   const [motionSigns, setMotionSigns] = useState<string[]>([]);
   const [wordSigns, setWordSigns] = useState<string[]>([]);
   const [removingAssignmentId, setRemovingAssignmentId] = useState<string | null>(null);
@@ -85,6 +89,8 @@ export function InstructorLearnerDetail() {
         learningPlanRes,
         assignmentsRes,
         notesRes,
+        certificatesRes,
+        certificationStatusRes,
         motionSignsRes,
         wordSignsRes,
       ] = await Promise.all([
@@ -98,6 +104,8 @@ export function InstructorLearnerDetail() {
         client.get<LearningPlan>(`/api/learner/${learnerId}/learning-plan`),
         client.get<AssignmentListResponse>(`/api/instructor/learners/${learnerId}/assignments`),
         client.get<NoteListResponse>(`/api/instructor/learners/${learnerId}/notes`),
+        client.get<CertificateListResponse>(`/api/certificates/learner/${learnerId}`),
+        client.get<CertificationStatusResponse>(`/api/certificates/learner/${learnerId}/status`),
         client.get<SupportedMotionSigns>('/api/motion-signs/supported'),
         client.get<SupportedWordSigns>('/api/word-signs/supported'),
       ]);
@@ -114,6 +122,8 @@ export function InstructorLearnerDetail() {
       setLearningPlan(learningPlanRes.data);
       setAssignments(assignmentsRes.data.assignments);
       setNotes(notesRes.data.notes);
+      setCertificates(certificatesRes.data.certificates);
+      setCertificationStatus(certificationStatusRes.data.courses);
       setMotionSigns(motionSignsRes.data.signs);
       setWordSigns(wordSignsRes.data.words);
     } catch (err) {
@@ -168,6 +178,25 @@ export function InstructorLearnerDetail() {
     },
     [learnerId]
   );
+
+  const handleIssueCertificate = useCallback(
+    async (courseId: string) => {
+      if (!learnerId) return;
+      const response = await client.post<Certificate>(`/api/instructor/learners/${learnerId}/certificates`, {
+        course_id: courseId,
+      });
+      setCertificates((current) => [response.data, ...current]);
+      setCertificationStatus((current) =>
+        current.map((c) => (c.course_id === courseId ? { ...c, already_issued: true, certificate_id: response.data.id } : c))
+      );
+    },
+    [learnerId]
+  );
+
+  const handleRevokeCertificate = useCallback(async (certificateId: string) => {
+    const response = await client.post<Certificate>(`/api/instructor/certificates/${certificateId}/revoke`, {});
+    setCertificates((current) => current.map((c) => (c.id === certificateId ? response.data : c)));
+  }, []);
 
   const handleAddToRoster = useCallback(async () => {
     if (!learnerId) return;
@@ -344,6 +373,17 @@ export function InstructorLearnerDetail() {
       </AssignedFocusPanel>
 
       <InstructorNotesPanel notes={notes} onAdd={handleAddNote} />
+
+      {learnerId && (
+        <CertificatesPanel
+          learnerId={learnerId}
+          certificates={certificates}
+          status={certificationStatus}
+          isStaff
+          onIssue={handleIssueCertificate}
+          onRevoke={handleRevokeCertificate}
+        />
+      )}
 
       {adaptivePlan && <AdaptiveLearningPanel plan={adaptivePlan} />}
       {feedback && <FeedbackPanel feedback={feedback} />}

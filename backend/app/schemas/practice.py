@@ -14,6 +14,19 @@ class SupportedLettersResponse(BaseModel):
     letters: list[str]
 
 
+class PracticeRecognizeResponse(BaseModel):
+    # False when no hand was found in frame at all — distinct from a hand
+    # being present but not matching any letter confidently (which the
+    # model doesn't represent separately; it always returns its best
+    # guess plus a confidence score once a hand is found). Mirrors
+    # MotionSignResponse / WordSignResponse / CommonSignResponse's own
+    # detected/not-detected split.
+    detected: bool
+    predicted_letter: Optional[str] = None
+    confidence: Optional[float] = None
+    landmarks: Optional[list[HandLandmarkPoint]] = None
+
+
 class PracticeFeedbackResponse(BaseModel):
     # Null when status is no_attempt_detected — that outcome is not logged
     # as a PracticeAttempt, so there's no row to reference.

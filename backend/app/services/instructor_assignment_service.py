@@ -26,6 +26,12 @@ TOPIC_TYPE_VALIDATORS = {
     "word_sign": get_supported_word_signs,
 }
 
+# notes/due_date arrive as multipart Form(...) fields (see instructor.py's
+# create-assignment endpoints), not a pydantic JSON body, so nothing
+# upstream bounds their length the way a Field(max_length=...) would for a
+# normal request body — this is the actual enforcement point.
+MAX_NOTES_LENGTH = 2000
+
 
 class InvalidAssignment(ValueError):
     pass
@@ -54,6 +60,11 @@ def _validate_due_date(due_date: str = None) -> None:
         date.fromisoformat(due_date)
     except ValueError:
         raise InvalidAssignment(f"due_date must be an ISO date (YYYY-MM-DD), got '{due_date}'.")
+
+
+def _validate_notes(notes: str = None) -> None:
+    if notes is not None and len(notes) > MAX_NOTES_LENGTH:
+        raise InvalidAssignment(f"notes must be at most {MAX_NOTES_LENGTH} characters (got {len(notes)}).")
 
 
 def _to_response_dict(row: InstructorAssignment, instructor_name: str = None) -> dict:
@@ -87,6 +98,7 @@ def create_assignment(
 ) -> InstructorAssignment:
     _validate_topic(topic, topic_type)
     _validate_due_date(due_date)
+    _validate_notes(notes)
 
     learner = db.query(User).filter(User.id == learner_id, User.role == "learner").first()
     if learner is None:
@@ -133,6 +145,7 @@ def create_assignments_for_many(
 
     _validate_topic(topic, topic_type)
     _validate_due_date(due_date)
+    _validate_notes(notes)
 
     unique_ids = list(dict.fromkeys(learner_ids))  # de-dupe, preserve order
     found = db.query(User).filter(User.id.in_(unique_ids), User.role == "learner").all()
