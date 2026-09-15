@@ -1,0 +1,39 @@
+# Sign Language Learning & Assessment Platform — full-stack deployment
+#
+# Usage:
+#   docker compose up --build
+#   Frontend: http://localhost:5173
+#   Backend:  http://localhost:8000  (docs at /docs)
+#
+# The SQLite database persists in the `backend_data` named volume, so
+# `docker compose down` + `docker compose up` keeps your data; only
+# `docker compose down -v` wipes it.
+
+services:
+  backend:
+    build: ./backend
+    ports:
+      - "8000:8000"
+    environment:
+      - JWT_SECRET=${JWT_SECRET:-change-me-in-production}
+    volumes:
+      - backend_data:/app/data
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/api/health')"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  frontend:
+    build:
+      context: ./frontend
+      args:
+        VITE_API_BASE_URL: ${VITE_API_BASE_URL:-http://localhost:8000}
+    ports:
+      - "5173:80"
+    depends_on:
+      backend:
+        condition: service_healthy
+
+volumes:
+  backend_data:

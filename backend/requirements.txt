@@ -1,0 +1,23 @@
+fastapi>=0.110.0
+uvicorn[standard]>=0.29.0
+pydantic[email]>=2.6.0
+PyJWT>=2.8.0
+pillow>=10.0.0
+numpy>=1.24.0
+python-multipart>=0.0.9
+
+# Milestone 2 — Gesture Recognition & Hand Tracking Engine
+# Pinned to 0.10.14: the last release shipping the legacy `mediapipe.solutions`
+# API, whose model files are bundled in the pip package (no separate model
+# download / internet access required at runtime). Newer mediapipe versions
+# (0.10.30+) moved to the Tasks API, which requires downloading a .task model
+# file from Google's CDN on first use.
+mediapipe==0.10.14
+opencv-python-headless>=4.8.0
+
+# Milestone 3 — AI Feedback & Learning Intelligence Engine
+pandas>=2.0.0
+scikit-learn>=1.3.0
+
+# Milestone 4 — Certification & Reporting: PDF generation
+reportlab>=4.0.0
